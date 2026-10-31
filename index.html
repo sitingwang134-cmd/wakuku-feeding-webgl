@@ -856,6 +856,7 @@ drawPet=function(){
   const scale=840/roomImage.height;
   ctx.drawImage(roomImage,(W-roomImage.width*scale)/2,0,roomImage.width*scale,840);
  }else room({wall:&#x27;#e0e6d2&#x27;,sky:&#x27;#b9d8d3&#x27;,floor:&#x27;#e1d1ae&#x27;,rug:&#x27;#aebb92&#x27;});
+ if(window.drawCozyRoom)window.drawCozyRoom();
  const hudWash=ctx.createLinearGradient(0,0,0,125);hudWash.addColorStop(0,&#x27;#fff5dfd9&#x27;);hudWash.addColorStop(1,&#x27;#fff5df00&#x27;);ctx.fillStyle=hudWash;ctx.fillRect(0,0,W,125);
  // Game HUD is intentionally quiet; tools and the character occupy the scene.
  txt(&#x27;苔苔的小屋&#x27;,27,42,21,&#x27;#355245&#x27;,&#x27;left&#x27;,600);
@@ -1127,6 +1128,78 @@ window.addEventListener(&#x27;pointercancel&#x27;,e=&gt;{if(e.pointerId===ballPo
 canvas.addEventListener(&#x27;lostpointercapture&#x27;,e=&gt;{if(e.pointerId===ballPointer14)finishBall14(true);});
 window.addEventListener(&#x27;blur&#x27;,()=&gt;finishBall14(true));
 document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidden)finishBall14(true);});
+&lt;/script&gt;&lt;script&gt;/* Cozy room: in-scene touch targets and device Chinese TTS, no remote keys. */
+(()=&gt;{
+ const cozy={lamp:true,waterAt:-100,chimeAt:-100,clock:0,last:performance.now()};
+ const reduced=matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+ const synth=window.speechSynthesis;
+ let voiceOn=false,unlocked=false,lastSpoken=-Infinity,lastText=&#x27;&#x27;,utterance=null;
+ try{voiceOn=localStorage.getItem(&#x27;wakuku-voice&#x27;)===&#x27;on&#x27;;}catch{}
+ const speechButton=document.createElement(&#x27;button&#x27;);speechButton.className=&#x27;cozy-voice&#x27;;speechButton.type=&#x27;button&#x27;;
+ const voiceSelect=document.createElement(&#x27;select&#x27;);voiceSelect.setAttribute(&#x27;aria-label&#x27;,&#x27;苔苔的中文声音&#x27;);
+ const style=document.createElement(&#x27;style&#x27;);style.textContent=`
+ .cozy-hotspot{position:absolute;z-index:12;background:none;border:0;box-shadow:none;padding:0;min-width:44px;min-height:44px;cursor:pointer;touch-action:manipulation;border-radius:50%}
+ .cozy-hotspot:focus-visible{outline:2px solid #b48548;outline-offset:2px;background:#ffe5aa33}
+ .cozy-voice{position:absolute;right:16%;top:2.2%;z-index:21;border:1px solid #d8c7a5;border-radius:22px;background:#fff8e9e8;color:#665b40;min-height:44px;padding:0 12px;font:12px sans-serif;cursor:pointer}
+ .settings-controls select{width:100%;padding:12px;border:1px solid #ddcfb2;background:#fffaf0;border-radius:12px;color:#52664e}
+ `;document.head.append(style);document.body.append(speechButton);settingsControls.append(voiceSelect);
+ function label(){speechButton.textContent=voiceOn?&#x27;语音 · 开&#x27;:&#x27;听苔苔说话&#x27;;speechButton.setAttribute(&#x27;aria-label&#x27;,voiceOn?&#x27;关闭苔苔语音&#x27;:&#x27;开启苔苔语音&#x27;);speechButton.setAttribute(&#x27;aria-pressed&#x27;,String(voiceOn));}
+ function loadVoices(){
+  const saved=voiceSelect.value;voiceSelect.replaceChildren();
+  const def=document.createElement(&#x27;option&#x27;);def.value=&#x27;&#x27;;def.textContent=&#x27;设备默认中文声音&#x27;;voiceSelect.append(def);
+  for(const v of synth?.getVoices()||[]){if(!/^zh|cmn|yue/i.test(v.lang))continue;const o=document.createElement(&#x27;option&#x27;);o.value=v.voiceURI;o.textContent=v.name;voiceSelect.append(o);}
+  voiceSelect.value=saved;
+ }
+ function stopVoice(){synth?.cancel();utterance=null;document.body.dataset.speech=&#x27;idle&#x27;;}
+ function speak(text,force=false){
+  if(!voiceOn||!unlocked||!synth||document.hidden)return;
+  const now=performance.now();if(!force&amp;&amp;(now-lastSpoken&lt;4500||synth.speaking||text===lastText&amp;&amp;now-lastSpoken&lt;20000))return;
+  stopVoice();lastSpoken=now;lastText=text;
+  const u=new SpeechSynthesisUtterance(text);utterance=u;u.lang=&#x27;zh-CN&#x27;;u.rate=.94;u.pitch=1.08;u.volume=.8;
+  const voices=synth.getVoices();u.voice=voices.find(v=&gt;v.voiceURI===voiceSelect.value)||voices.find(v=&gt;/^zh-CN/i.test(v.lang))||voices.find(v=&gt;/^zh/i.test(v.lang))||null;
+  u.onstart=()=&gt;{document.body.dataset.speech=&#x27;speaking&#x27;;document.body.dataset.lastSpoken=text;};
+  u.onend=()=&gt;{if(utterance===u){utterance=null;document.body.dataset.speech=&#x27;idle&#x27;;}};
+  u.onerror=e=&gt;{if(utterance!==u)return;utterance=null;document.body.dataset.speech=&#x27;unavailable&#x27;;if(![&#x27;interrupted&#x27;,&#x27;canceled&#x27;].includes(e.error))toast(&#x27;这台设备暂时不能朗读，文字回应仍可使用。&#x27;);};
+  synth.speak(u);
+ }
+ label();loadVoices();synth?.addEventListener(&#x27;voiceschanged&#x27;,loadVoices);
+ for(const event of [&#x27;pointerdown&#x27;,&#x27;click&#x27;,&#x27;keydown&#x27;])document.addEventListener(event,()=&gt;{unlocked=true;},{capture:true});
+ speechButton.onclick=()=&gt;{if(!synth){toast(&#x27;这台浏览器暂不支持语音，可以继续看文字回应。&#x27;);return;}voiceOn=!voiceOn;unlocked=true;try{localStorage.setItem(&#x27;wakuku-voice&#x27;,voiceOn?&#x27;on&#x27;:&#x27;off&#x27;);}catch{}label();if(voiceOn){toast(&#x27;你来啦，今天也陪我玩一会儿吧。&#x27;);speak(&#x27;你来啦，今天也陪我玩一会儿吧。&#x27;,true);}else stopVoice();};
+ voiceSelect.onchange=()=&gt;{unlocked=true;if(voiceOn)speak(&#x27;你好呀，我是苔苔。&#x27;,true);};
+ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidden)stopVoice();});window.addEventListener(&#x27;pagehide&#x27;,stopVoice);
+ gear.addEventListener(&#x27;click&#x27;,stopVoice);
+ const oldCheck=checkPet;let previous=[...pet.actions];let alternates=[0,0,0];
+ const lines=[[&#x27;甜甜的，谢谢你。&#x27;,&#x27;这一颗，好好吃。&#x27;],[&#x27;梳顺啦，好舒服。&#x27;,&#x27;轻轻的，我喜欢。&#x27;],[&#x27;捡到啦，再玩一次吧。&#x27;,&#x27;看，我把球带回来啦。&#x27;]];
+ checkPet=function(){const changed=pet.actions.map((n,i)=&gt;n&gt;previous[i]);oldCheck();previous=[...pet.actions];const i=changed.findIndex(Boolean);if(i&gt;=0)speak(lines[i][alternates[i]++%2]);};
+ const oldReset=reset;reset=function(...a){oldReset(...a);previous=[...pet.actions];stopVoice();};
+ window.addEventListener(&#x27;wakuku:tap&#x27;,()=&gt;{if(!paused)speak(&#x27;嘿嘿，帽子要歪啦。&#x27;);});
+ napButton.addEventListener(&#x27;click&#x27;,()=&gt;speak(&#x27;我眯一会儿，陪在我身边吧。&#x27;));
+ function respond(text){toast(text);speak(text);if(!pet.feedPhase&amp;&amp;!ballBusy()&amp;&amp;!dollSleeping)playDollAction(&#x27;happy&#x27;);}
+ function hotspot(name,x,y,w,h,fn){const b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.className=&#x27;cozy-hotspot&#x27;;b.setAttribute(&#x27;aria-label&#x27;,name);b.title=name;b.style.cssText=`left:${(x-w/2)/W*100}%;top:${(y-h/2)/H*100}%;width:${w/W*100}%;height:${h/H*100}%`;b.onclick=()=&gt;{if(paused)return;fn(b);};document.body.append(b);return b;}
+ hotspot(&#x27;开关小屋暖灯&#x27;,365,303,60,90,b=&gt;{cozy.lamp=!cozy.lamp;b.setAttribute(&#x27;aria-pressed&#x27;,String(cozy.lamp));window.WakukuDoll?.setAtmosphere?.(cozy.lamp);respond(cozy.lamp?&#x27;暖暖的灯，像小太阳。&#x27;:&#x27;留一点阳光，也很舒服。&#x27;);}).setAttribute(&#x27;aria-pressed&#x27;,&#x27;true&#x27;);
+ hotspot(&#x27;给小植物浇水&#x27;,50,410,70,90,()=&gt;{if(cozy.clock-cozy.waterAt&lt;3)return;cozy.waterAt=cozy.clock;respond(&#x27;咕噜咕噜，小叶子也喝饱啦。&#x27;);});
+ hotspot(&#x27;轻拨窗边风铃&#x27;,81,249,56,85,()=&gt;{cozy.chimeAt=cozy.clock;respond(&#x27;叮铃，是风在打招呼。&#x27;);if(!muted){Feedback.start();for(const [i,n] of [880,1108,1318].entries())setTimeout(()=&gt;{if(document.hidden||muted)return;const a=Feedback.ctx;if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=&#x27;sine&#x27;;o.frequency.value=n;g.gain.setValueAtTime(.035,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+1);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+1);},i*120);}});
+ window.drawCozyRoom=()=&gt;{
+  const now=performance.now();if(!paused)cozy.clock+=Math.min((now-cozy.last)/1000,.05);cozy.last=now;const c=cozy.clock;
+  ctx.save();
+  const wash=ctx.createLinearGradient(0,0,432,650);wash.addColorStop(0,&#x27;#ffe4a51c&#x27;);wash.addColorStop(.6,&#x27;#ffc98c0a&#x27;);wash.addColorStop(1,&#x27;#a76f3614&#x27;);ctx.fillStyle=wash;ctx.fillRect(0,0,W,632);
+  // Soft window rays and airborne motes stay behind the doll.
+  ctx.fillStyle=&#x27;#fff1cb16&#x27;;ctx.beginPath();ctx.moveTo(0,195);ctx.lineTo(95,175);ctx.lineTo(364,595);ctx.lineTo(242,620);ctx.fill();
+  for(let i=0;i&lt;15;i++){const x=28+(i*47)%360+Math.sin((reduced?0:c)*.24+i)*9,y=205+(i*31+(reduced?0:c*3))%360;ellipse(x,y,.8+(i%3)*.35,.8+(i%3)*.35,&#x27;#fff4d977&#x27;);}
+  // Lamp: shade, stem, weighted base, and a diffuse amber pool.
+  if(cozy.lamp){const g=ctx.createRadialGradient(365,287,4,365,300,155);g.addColorStop(0,&#x27;#ffe3a068&#x27;);g.addColorStop(.4,&#x27;#ffd58b25&#x27;);g.addColorStop(1,&#x27;#ffd58b00&#x27;);ctx.fillStyle=g;ctx.fillRect(210,145,222,310);}
+  ellipse(365,344,29,5,&#x27;#6c48292a&#x27;);rr(360,291,9,49,4,&#x27;#92704b&#x27;);ellipse(365,338,22,5,&#x27;#b8996d&#x27;);
+  const shade=ctx.createLinearGradient(340,260,390,302);shade.addColorStop(0,cozy.lamp?&#x27;#f4ddad&#x27;:&#x27;#cbbd9d&#x27;);shade.addColorStop(.5,cozy.lamp?&#x27;#fff0c8&#x27;:&#x27;#e3d8bd&#x27;);shade.addColorStop(1,&#x27;#b99a71&#x27;);ctx.fillStyle=shade;ctx.beginPath();ctx.moveTo(348,260);ctx.lineTo(382,260);ctx.lineTo(395,302);ctx.quadraticCurveTo(365,312,335,302);ctx.closePath();ctx.fill();ellipse(365,260,17,4,&#x27;#ddc8a4&#x27;);ellipse(365,303,29,4,cozy.lamp?&#x27;#ffe8ac&#x27;:&#x27;#bba884&#x27;);
+  // Rounded ceramic planter; leaves bend gently after watering.
+  ellipse(50,450,28,5,&#x27;#584a3229&#x27;);const wet=c-cozy.waterAt;const sway=reduced?0:(wet&lt;3?Math.sin(wet*6)*Math.exp(-wet):Math.sin(c*.8)*.08);ctx.save();ctx.translate(50,420);ctx.rotate(sway*.13);ctx.strokeStyle=&#x27;#698058&#x27;;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,7);ctx.quadraticCurveTo(-5,-18,3,-46);ctx.stroke();for(let i=0;i&lt;5;i++){ctx.save();ctx.translate(i%2?0:-4,-9-i*8);ctx.rotate((i%2?1:-1)*.8);const leaf=ctx.createLinearGradient(-8,-20,8,3);leaf.addColorStop(0,&#x27;#b2bd8e&#x27;);leaf.addColorStop(.5,i%2?&#x27;#8e9f6d&#x27;:&#x27;#9dac7c&#x27;);leaf.addColorStop(1,&#x27;#637b52&#x27;);ellipse(0,-9,8,15,leaf);ctx.strokeStyle=&#x27;#d4d9b153&#x27;;ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(0,1);ctx.lineTo(0,-20);ctx.stroke();ctx.restore();}ctx.restore();
+  const pot=ctx.createLinearGradient(27,0,74,0);pot.addColorStop(0,&#x27;#a76f54&#x27;);pot.addColorStop(.4,&#x27;#d39b79&#x27;);pot.addColorStop(1,&#x27;#b97e5d&#x27;);rr(30,419,40,29,8,pot);ellipse(50,420,22,6,&#x27;#ddad87&#x27;);ellipse(50,420,17,3,&#x27;#79634b&#x27;);
+  if(wet&lt;2.5){for(let i=0;i&lt;8;i++){const f=(wet*1.4+i*.12)%1;ellipse(32+i*5,365+f*52,1.7,3,&#x27;#b6dfe5bb&#x27;);}txt(&#x27;喝饱啦&#x27;,50,367,10,&#x27;#6e835b&#x27;,&#x27;center&#x27;);}
+  // Wooden wind chime with separate swinging bell and clapper.
+  ctx.save();ctx.translate(81,207);ctx.rotate(reduced?0:Math.sin(c*3)*.025+(c-cozy.chimeAt&lt;4?Math.sin((c-cozy.chimeAt)*7)*Math.exp(-(c-cozy.chimeAt))*.3:0));ctx.strokeStyle=&#x27;#a48860&#x27;;ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,45);ctx.stroke();rr(-16,24,32,6,3,&#x27;#b39062&#x27;);for(let i=0;i&lt;3;i++){rr(-11+i*9,33,4,21+i%2*8,2,&#x27;#d1ad72&#x27;);}ctx.beginPath();ctx.moveTo(0,52);ctx.lineTo(0,65);ctx.stroke();ellipse(0,66,5,7,&#x27;#c59c68&#x27;);ctx.restore();
+  txt(&#x27;轻轻点一下&#x27;,365,363,9,&#x27;#948263&#x27;,&#x27;center&#x27;);
+  ctx.restore();
+ };
+})();
 &lt;/script&gt;
 &lt;script src=&quot;model-part-00.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-01.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-02.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-03.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-04.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-05.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-06.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-07.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-08.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-09.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-10.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-11.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-12.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-13.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-14.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;wakuku_doll_glb.js&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;wakuku-runtime.js&quot;&gt;&lt;/script&gt;&lt;script&gt;
@@ -1143,11 +1216,11 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
 
   const scene = new THREE.Scene();
   scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xdedede, 1.8));
-  const key = new THREE.DirectionalLight(0xffffff, 1.1);
+  scene.add(new THREE.HemisphereLight(0xfff3df, 0xb8b3a3, 1.35));
+  const key = new THREE.DirectionalLight(0xffe9cd, 1.6);
   key.position.set(-1.5, 2.5, 2);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0xffffff, 0.25);
+  const rim = new THREE.DirectionalLight(0xffd69d, 0.45);
   rim.position.set(1.5, 1.8, -2);
   scene.add(rim);
 
@@ -1237,7 +1310,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
   }
   function socket(name){const b=bone(name);return b?planePoint(b.getWorldPosition(new THREE.Vector3())):null;}
   function play(name){if(!(name in durations))throw new Error(`Unknown WAKUKU action: ${name}`);current=name;started=performance.now();}
-  window.WakukuDoll={play,setState:s=&gt;Object.assign(state,s),getSocket:()=&gt;heldBall.visible?planePoint(heldBall.position):socket((state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;)+&#x27;HandMiddle1&#x27;),getMouth:()=&gt;ready?planePoint(bone(&#x27;Head&#x27;).localToWorld(mouthLocal.clone())):null};
+  window.WakukuDoll={setAtmosphere:on=&gt;{rim.intensity=on?.65:.22;key.intensity=on?1.6:1.4;},play,setState:s=&gt;Object.assign(state,s),getSocket:()=&gt;heldBall.visible?planePoint(heldBall.position):socket((state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;)+&#x27;HandMiddle1&#x27;),getMouth:()=&gt;ready?planePoint(bone(&#x27;Head&#x27;).localToWorld(mouthLocal.clone())):null};
   new GLTFLoader().load(window.WAKUKU_DOLL_GLB_URL,gltf=&gt;{
     gltf.scene.traverse(o=&gt;{
       if(o.isMesh){
