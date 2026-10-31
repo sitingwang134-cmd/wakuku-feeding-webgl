@@ -1217,7 +1217,24 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
  function button(label,x,y,w,h,fn){const b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.className=&#x27;room-object&#x27;;b.setAttribute(&#x27;aria-label&#x27;,label);b.title=label;b.style.cssText=`left:${(x-w/2)/432*100}%;top:${(y-h/2)/768*100}%;width:${w/432*100}%;height:${h/768*100}%`;b.onclick=()=&gt;{if(!paused)fn(b)};document.body.append(b);return b;}
  function react(text){toast(text);if(!pet.feedPhase&amp;&amp;!ballBusy()&amp;&amp;!dollSleeping)playDollAction(&#x27;happy&#x27;);}
  const windowButton=button(&#x27;切换午后与星夜&#x27;,65,162,65,73,b=&gt;{state.night=!state.night;b.setAttribute(&#x27;aria-pressed&#x27;,String(state.night));react(state.night?&#x27;星星来啦，小屋还是暖暖的。&#x27;:&#x27;太阳回来啦，伸个懒腰。&#x27;);});windowButton.setAttribute(&#x27;aria-pressed&#x27;,&#x27;false&#x27;);
- button(&#x27;转动音乐盒&#x27;,368,450,66,74,()=&gt;{state.music=state.music&gt;0?0:12;state.note=-1;if(state.music&amp;&amp;!muted)Feedback.start().catch(()=&gt;{});react(state.music?(muted?&#x27;音乐盒转起来啦，设置里可以打开声音。&#x27;:&#x27;叮叮咚咚，陪我摇一摇。&#x27;):&#x27;让音乐盒休息一下。&#x27;);});
+ let musicContext=null,musicNodes=[],musicRequest=0;
+ function stopMusic(){musicRequest++;state.music=0;for(const node of musicNodes){try{node.stop();}catch{}}musicNodes=[];musicButton.setAttribute(&#x27;aria-pressed&#x27;,&#x27;false&#x27;);musicButton.dataset.audio=&#x27;stopped&#x27;;}
+ const musicButton=button(&#x27;转动音乐盒&#x27;,368,450,66,74,async()=&gt;{
+  if(state.music&gt;0){stopMusic();toast(&#x27;音乐盒休息啦。&#x27;);return;}
+  const request=++musicRequest;
+  try{
+   musicContext ||= new (window.AudioContext||window.webkitAudioContext)();
+   await musicContext.resume();if(request!==musicRequest||document.hidden||paused)return;
+   const now=musicContext.currentTime+.03,melody=[523.25,659.25,783.99,659.25,587.33,698.46,880,783.99,659.25,523.25,587.33,659.25,783.99,659.25,587.33,523.25];
+   for(let i=0;i&lt;melody.length;i++)for(const [ratio,volume] of [[1,.13],[2,.025]]){
+    const o=musicContext.createOscillator(),g=musicContext.createGain(),at=now+i*.65;
+    o.type=&#x27;sine&#x27;;o.frequency.value=melody[i]*ratio;g.gain.setValueAtTime(0,at);g.gain.linearRampToValueAtTime(volume,at+.009);g.gain.exponentialRampToValueAtTime(.0001,at+1.5);o.connect(g);g.connect(musicContext.destination);o.onended=()=&gt;{o.disconnect();g.disconnect();};o.start(at);o.stop(at+1.55);musicNodes.push(o);
+   }
+   state.music=11.4;musicButton.setAttribute(&#x27;aria-pressed&#x27;,&#x27;true&#x27;);musicButton.dataset.audio=&#x27;playing&#x27;;react(&#x27;叮叮咚咚，陪我摇一摇。&#x27;);
+  }catch(e){stopMusic();musicButton.dataset.audio=&#x27;error&#x27;;toast(&#x27;音乐还没响，再点一下音乐盒试试。&#x27;);}
+ });musicButton.setAttribute(&#x27;aria-pressed&#x27;,&#x27;false&#x27;);
+ gear.addEventListener(&#x27;click&#x27;,stopMusic);
+
  function clearBubbles(){for(const p of state.bubbles)p.button.remove();state.bubbles=[];}
  button(&#x27;吹一串泡泡&#x27;,56,552,65,75,()=&gt;{
   clearBubbles();state.popped=0;
@@ -1227,11 +1244,11 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
   }
   react(&#x27;来戳泡泡吧，轻轻一点，啵！&#x27;);
  });
- document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidden){clearBubbles();state.music=0;}});
- const oldReset=reset;reset=function(...args){clearBubbles();state.music=0;oldReset(...args);};
+ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidden){clearBubbles();stopMusic();}});
+ const oldReset=reset;reset=function(...args){clearBubbles();stopMusic();oldReset(...args);};
  const oldRoom=window.drawCozyRoom;
  window.drawCozyRoom=()=&gt;{
-  oldRoom();const now=performance.now(),dt=Math.min(.05,(now-state.last)/1000);state.last=now;if(!paused){state.clock+=dt;state.blend+=(Number(state.night)-state.blend)*Math.min(1,dt*3);state.music=Math.max(0,state.music-dt);}
+  oldRoom();const now=performance.now(),dt=Math.min(.05,(now-state.last)/1000);state.last=now;if(!paused){state.clock+=dt;state.blend+=(Number(state.night)-state.blend)*Math.min(1,dt*3);state.music=Math.max(0,state.music-dt);if(!state.music&amp;&amp;musicNodes.length)stopMusic();}
   const c=state.clock,n=state.blend;
   window.WakukuDoll?.setRoomMood?.(n);
   ctx.save();
@@ -1245,7 +1262,7 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
   // Small carved music box on the side cabinet, with a rotating wooden bird.
   ctx.save();ctx.translate(0,40);ellipse(368,442,30,5,&#x27;#57422b2b&#x27;);const wood=ctx.createLinearGradient(339,0,396,0);wood.addColorStop(0,&#x27;#a87a50&#x27;);wood.addColorStop(.45,&#x27;#dbb687&#x27;);wood.addColorStop(1,&#x27;#ad7c50&#x27;);rr(340,418,56,22,6,wood);rr(337,412,62,9,4,&#x27;#e6c69b&#x27;);ellipse(368,415,22,5,&#x27;#b18a60&#x27;);
   ctx.save();ctx.translate(368,400);if(state.music&amp;&amp;!reduced)ctx.scale(.7+.3*Math.cos(c*3),1);ellipse(0,0,12,8,&#x27;#d5b590&#x27;);ellipse(9,-7,6,6,&#x27;#e7cba6&#x27;);ellipse(11,-8,1,1,&#x27;#6e5941&#x27;);ctx.fillStyle=&#x27;#be905d&#x27;;ctx.beginPath();ctx.moveTo(14,-7);ctx.lineTo(20,-4);ctx.lineTo(14,-3);ctx.fill();ctx.strokeStyle=&#x27;#98774f&#x27;;ctx.beginPath();ctx.moveTo(-3,6);ctx.lineTo(-3,12);ctx.moveTo(3,6);ctx.lineTo(3,12);ctx.stroke();ctx.restore();
-  if(state.music){for(let i=0;i&lt;3;i++)txt(&#x27;♪&#x27;,350+i*16,378-((reduced?0:c*18)+i*14)%42,13,&#x27;#af865e&#x27;,&#x27;center&#x27;);const beat=Math.floor(c*3);if(!paused&amp;&amp;beat!==state.note){state.note=beat;if(!muted&amp;&amp;Feedback.ctx?.state===&#x27;running&#x27;)Feedback.note([523,659,784,659,587,698,880,784][beat%8],Feedback.ctx.currentTime,.35,.08);}}
+  if(state.music){for(let i=0;i&lt;3;i++)txt(&#x27;♪&#x27;,350+i*16,378-((reduced?0:c*18)+i*14)%42,13,&#x27;#af865e&#x27;,&#x27;center&#x27;);if(state.music&lt;.06)stopMusic();}
   ctx.restore();
   // Iridescent soap bottle and wooden wand on the floor.
   ellipse(56,585,24,5,&#x27;#79654428&#x27;);const glass=ctx.createLinearGradient(38,0,74,0);glass.addColorStop(0,&#x27;#9cbdb19c&#x27;);glass.addColorStop(.35,&#x27;#deede3dd&#x27;);glass.addColorStop(1,&#x27;#88afa7bc&#x27;);rr(40,537,33,45,10,glass);rr(47,526,19,14,4,&#x27;#b79872&#x27;);rr(46,548,21,19,6,&#x27;#fff4d5ce&#x27;);ellipse(56,557,5,5,&#x27;#9fbca7&#x27;);ctx.strokeStyle=&#x27;#d2b68c&#x27;;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(32,575);ctx.lineTo(28,548);ctx.stroke();ctx.beginPath();ctx.ellipse(27,540,7,9,-.15,0,TAU);ctx.stroke();
