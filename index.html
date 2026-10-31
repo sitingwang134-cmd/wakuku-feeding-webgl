@@ -1209,6 +1209,53 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
   ctx.restore();
  };
 })();
+&lt;/script&gt;&lt;script&gt;/* A lived-in room: reversible light mood, a music box and poppable bubbles. */
+(()=&gt;{
+ const reduced=matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+ const state={night:false,blend:0,music:0,note:-1,bubbles:[],clock:0,last:performance.now(),popped:0};
+ const style=document.createElement(&#x27;style&#x27;);style.textContent=&#x27;.room-object{position:absolute;z-index:13;border:0;padding:0;background:transparent;box-shadow:none;min-width:44px;min-height:44px;border-radius:24px;cursor:pointer;touch-action:manipulation}.room-object:focus-visible{outline:2px solid #d0a365;background:#fff1ca33}.room-bubble{border-radius:50%}&#x27;;document.head.append(style);
+ function button(label,x,y,w,h,fn){const b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.className=&#x27;room-object&#x27;;b.setAttribute(&#x27;aria-label&#x27;,label);b.title=label;b.style.cssText=`left:${(x-w/2)/432*100}%;top:${(y-h/2)/768*100}%;width:${w/432*100}%;height:${h/768*100}%`;b.onclick=()=&gt;{if(!paused)fn(b)};document.body.append(b);return b;}
+ function react(text){toast(text);if(!pet.feedPhase&amp;&amp;!ballBusy()&amp;&amp;!dollSleeping)playDollAction(&#x27;happy&#x27;);}
+ const windowButton=button(&#x27;切换午后与星夜&#x27;,65,162,65,73,b=&gt;{state.night=!state.night;b.setAttribute(&#x27;aria-pressed&#x27;,String(state.night));react(state.night?&#x27;星星来啦，小屋还是暖暖的。&#x27;:&#x27;太阳回来啦，伸个懒腰。&#x27;);});windowButton.setAttribute(&#x27;aria-pressed&#x27;,&#x27;false&#x27;);
+ button(&#x27;转动音乐盒&#x27;,368,450,66,74,()=&gt;{state.music=state.music&gt;0?0:12;state.note=-1;if(state.music&amp;&amp;!muted)Feedback.start().catch(()=&gt;{});react(state.music?(muted?&#x27;音乐盒转起来啦，设置里可以打开声音。&#x27;:&#x27;叮叮咚咚，陪我摇一摇。&#x27;):&#x27;让音乐盒休息一下。&#x27;);});
+ function clearBubbles(){for(const p of state.bubbles)p.button.remove();state.bubbles=[];}
+ button(&#x27;吹一串泡泡&#x27;,56,552,65,75,()=&gt;{
+  clearBubbles();state.popped=0;
+  for(let i=0;i&lt;6;i++){
+   const p={x:75+i*49,y:530+i%2*35,r:17+i%3*4,age:0,life:reduced?14:10,burst:0,phase:i*.9,button:null};
+   p.button=button(&#x27;戳破第&#x27;+(i+1)+&#x27;个泡泡&#x27;,p.x,p.y,48,48,()=&gt;{if(p.burst)return;p.burst=.01;p.button.hidden=true;state.popped++;buzz(5);if(!muted)Feedback.fx(&#x27;select&#x27;);if(state.popped===6)react(&#x27;全都抓到啦！再吹一串？&#x27;);else toast(&#x27;啵！抓到 &#x27;+state.popped+&#x27; / 6 个泡泡。&#x27;);});p.button.classList.add(&#x27;room-bubble&#x27;);state.bubbles.push(p);
+  }
+  react(&#x27;来戳泡泡吧，轻轻一点，啵！&#x27;);
+ });
+ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidden){clearBubbles();state.music=0;}});
+ const oldReset=reset;reset=function(...args){clearBubbles();state.music=0;oldReset(...args);};
+ const oldRoom=window.drawCozyRoom;
+ window.drawCozyRoom=()=&gt;{
+  oldRoom();const now=performance.now(),dt=Math.min(.05,(now-state.last)/1000);state.last=now;if(!paused){state.clock+=dt;state.blend+=(Number(state.night)-state.blend)*Math.min(1,dt*3);state.music=Math.max(0,state.music-dt);}
+  const c=state.clock,n=state.blend;
+  window.WakukuDoll?.setRoomMood?.(n);
+  ctx.save();
+  // The blue dusk wash is balanced with pools of warm light, never painted over the doll.
+  ctx.fillStyle=`rgba(40,49,85,${n*.29})`;ctx.fillRect(0,0,W,632);
+  const vignette=ctx.createRadialGradient(218,390,110,218,390,430);vignette.addColorStop(0,&#x27;#77502600&#x27;);vignette.addColorStop(1,&#x27;#76502e20&#x27;);ctx.fillStyle=vignette;ctx.fillRect(0,0,W,632);
+  if(n&gt;.01){ctx.save();ctx.globalAlpha=n;ctx.fillStyle=&#x27;#fff1c2&#x27;;ctx.beginPath();ctx.moveTo(76,125);ctx.bezierCurveTo(59,126,59,150,77,149);ctx.bezierCurveTo(67,143,68,132,76,125);ctx.fill();for(let i=0;i&lt;8;i++)ellipse(48+i*7%42,117+i*13%64,1,1,&#x27;#fff8d9&#x27;);ctx.restore();}
+  // Suspended bulbs have tiny glass bodies, reflections and soft halos.
+  ctx.strokeStyle=&#x27;#a58a6080&#x27;;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(130,205);ctx.quadraticCurveTo(260,242,422,197);ctx.stroke();
+  for(let i=0;i&lt;8;i++){const x=145+i*37,y=207+Math.sin(i/7*Math.PI)*15;const glow=ctx.createRadialGradient(x,y+8,1,x,y+8,21);glow.addColorStop(0,`rgba(255,222,153,${.28+n*.32})`);glow.addColorStop(1,&#x27;#ffe3a000&#x27;);ctx.fillStyle=glow;ctx.fillRect(x-21,y-13,42,42);rr(x-2,y-2,4,6,1,&#x27;#99815d&#x27;);ellipse(x,y+7,3.8,5.2,&#x27;#ffe9b9&#x27;);ellipse(x-1,y+5,1,1.8,&#x27;#fffaf0&#x27;);}
+  // Small carved music box on the side cabinet, with a rotating wooden bird.
+  ctx.save();ctx.translate(0,40);ellipse(368,442,30,5,&#x27;#57422b2b&#x27;);const wood=ctx.createLinearGradient(339,0,396,0);wood.addColorStop(0,&#x27;#a87a50&#x27;);wood.addColorStop(.45,&#x27;#dbb687&#x27;);wood.addColorStop(1,&#x27;#ad7c50&#x27;);rr(340,418,56,22,6,wood);rr(337,412,62,9,4,&#x27;#e6c69b&#x27;);ellipse(368,415,22,5,&#x27;#b18a60&#x27;);
+  ctx.save();ctx.translate(368,400);if(state.music&amp;&amp;!reduced)ctx.scale(.7+.3*Math.cos(c*3),1);ellipse(0,0,12,8,&#x27;#d5b590&#x27;);ellipse(9,-7,6,6,&#x27;#e7cba6&#x27;);ellipse(11,-8,1,1,&#x27;#6e5941&#x27;);ctx.fillStyle=&#x27;#be905d&#x27;;ctx.beginPath();ctx.moveTo(14,-7);ctx.lineTo(20,-4);ctx.lineTo(14,-3);ctx.fill();ctx.strokeStyle=&#x27;#98774f&#x27;;ctx.beginPath();ctx.moveTo(-3,6);ctx.lineTo(-3,12);ctx.moveTo(3,6);ctx.lineTo(3,12);ctx.stroke();ctx.restore();
+  if(state.music){for(let i=0;i&lt;3;i++)txt(&#x27;♪&#x27;,350+i*16,378-((reduced?0:c*18)+i*14)%42,13,&#x27;#af865e&#x27;,&#x27;center&#x27;);const beat=Math.floor(c*3);if(!paused&amp;&amp;beat!==state.note){state.note=beat;if(!muted&amp;&amp;Feedback.ctx?.state===&#x27;running&#x27;)Feedback.note([523,659,784,659,587,698,880,784][beat%8],Feedback.ctx.currentTime,.35,.08);}}
+  ctx.restore();
+  // Iridescent soap bottle and wooden wand on the floor.
+  ellipse(56,585,24,5,&#x27;#79654428&#x27;);const glass=ctx.createLinearGradient(38,0,74,0);glass.addColorStop(0,&#x27;#9cbdb19c&#x27;);glass.addColorStop(.35,&#x27;#deede3dd&#x27;);glass.addColorStop(1,&#x27;#88afa7bc&#x27;);rr(40,537,33,45,10,glass);rr(47,526,19,14,4,&#x27;#b79872&#x27;);rr(46,548,21,19,6,&#x27;#fff4d5ce&#x27;);ellipse(56,557,5,5,&#x27;#9fbca7&#x27;);ctx.strokeStyle=&#x27;#d2b68c&#x27;;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(32,575);ctx.lineTo(28,548);ctx.stroke();ctx.beginPath();ctx.ellipse(27,540,7,9,-.15,0,TAU);ctx.stroke();
+  txt(&#x27;泡泡&#x27;,56,607,10,&#x27;#877557&#x27;,&#x27;center&#x27;);txt(&#x27;音乐盒&#x27;,368,501,9,&#x27;#877557&#x27;,&#x27;center&#x27;);
+  ctx.restore();
+  if(!paused)for(const p of state.bubbles){p.age+=dt;if(p.burst)p.burst+=dt;else if(!reduced){p.y-=dt*19;p.x+=Math.sin(c+p.phase)*dt*6;}p.button.hidden=paused||p.burst&gt;0;p.button.style.left=`${(p.x-24)/432*100}%`;p.button.style.top=`${(p.y-24)/768*100}%`;}
+  state.bubbles=state.bubbles.filter(p=&gt;{if(p.age&gt;p.life||p.burst&gt;.3){p.button.remove();return false;}return true;});
+ };
+ const oldDraw=drawPet;drawPet=function(){oldDraw();withCareForeground(()=&gt;{ctx.save();for(const p of state.bubbles){const a=Math.min(1,(p.life-p.age)*2);ctx.globalAlpha=Math.max(0,a);if(p.burst){for(let i=0;i&lt;7;i++){const ang=i/7*TAU;ellipse(p.x+Math.cos(ang)*(p.r+p.burst*65),p.y+Math.sin(ang)*(p.r+p.burst*65),1.5,1.5,&#x27;#fff4d3&#x27;);}continue;}const g=ctx.createRadialGradient(p.x-p.r*.3,p.y-p.r*.4,1,p.x,p.y,p.r);g.addColorStop(0,&#x27;#ffffff09&#x27;);g.addColorStop(.75,&#x27;#c6ebee19&#x27;);g.addColorStop(.94,&#x27;#f8d7d681&#x27;);g.addColorStop(1,&#x27;#fff4dbb0&#x27;);ellipse(p.x,p.y,p.r,p.r,g);ctx.strokeStyle=&#x27;#fffaf0bb&#x27;;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(p.x,p.y,p.r*.82,3.6,4.7);ctx.stroke();ellipse(p.x-p.r*.3,p.y-p.r*.55,2.6,1.4,&#x27;#ffffffcf&#x27;);}ctx.restore();});};
+})();
 &lt;/script&gt;
 &lt;script src=&quot;model-part-00.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-01.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-02.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-03.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-04.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-05.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-06.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-07.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-08.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-09.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-10.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-11.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-12.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-13.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-14.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;wakuku_doll_glb.js&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;wakuku-runtime.js&quot;&gt;&lt;/script&gt;&lt;script&gt;
@@ -1319,7 +1366,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
   }
   function socket(name){const b=bone(name);return b?planePoint(b.getWorldPosition(new THREE.Vector3())):null;}
   function play(name){if(!(name in durations))throw new Error(`Unknown WAKUKU action: ${name}`);current=name;started=performance.now();}
-  window.WakukuDoll={setAtmosphere:on=&gt;{rim.intensity=on?.65:.22;key.intensity=on?1.6:1.4;},play,setState:s=&gt;Object.assign(state,s),getSocket:()=&gt;heldBall.visible?planePoint(heldBall.position):socket((state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;)+&#x27;HandMiddle1&#x27;),getMouth:()=&gt;ready?planePoint(bone(&#x27;Head&#x27;).localToWorld(mouthLocal.clone())):null};
+  window.WakukuDoll={setRoomMood:n=&gt;{key.color.setRGB(1,.83-n*.08,.65+n*.2);renderer.toneMappingExposure=1-n*.10;},setAtmosphere:on=&gt;{rim.intensity=on?.65:.22;key.intensity=on?1.6:1.4;},play,setState:s=&gt;Object.assign(state,s),getSocket:()=&gt;heldBall.visible?planePoint(heldBall.position):socket((state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;)+&#x27;HandMiddle1&#x27;),getMouth:()=&gt;ready?planePoint(bone(&#x27;Head&#x27;).localToWorld(mouthLocal.clone())):null};
   new GLTFLoader().load(window.WAKUKU_DOLL_GLB_URL,gltf=&gt;{
     gltf.scene.traverse(o=&gt;{
       if(o.isMesh){
