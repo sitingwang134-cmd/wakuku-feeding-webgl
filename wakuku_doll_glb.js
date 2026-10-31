@@ -1,0 +1,1 @@
+window.WAKUKU_DOLL_GLB_URL=window.WAKUKU_MODEL_PARTS.join("");delete window.WAKUKU_MODEL_PARTS;
