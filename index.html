@@ -1399,7 +1399,7 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
 &lt;/script&gt;&lt;script&gt;/* Shared object registry: direct mesh picking, optional hints and reversible feedback. */
 window.createHouseInteractions=function(THREE,group){
  const entries=new Map(),ray=new THREE.Raycaster();let clock=0,last=0;
- const notes={&#x27;沙发&#x27;:&#x27;软软的靠垫，轻轻弹了一下。&#x27;,&#x27;茶几&#x27;:&#x27;叩叩，木头的声音真好听。&#x27;,&#x27;床与枕头&#x27;:&#x27;枕头蓬松啦，休息一会儿。&#x27;,&#x27;书柜&#x27;:&#x27;抽出一本书，再轻轻放回去。&#x27;,&#x27;书与花瓶&#x27;:&#x27;小摆件晃了晃，书也探出头啦。&#x27;,&#x27;积木&#x27;:&#x27;一块一块，搭座小塔。&#x27;,&#x27;玩具篮&#x27;:&#x27;打开看看，里面藏着小玩具。&#x27;,&#x27;厨房柜门&#x27;:&#x27;柜门打开啦，再点一下关上。&#x27;,&#x27;抽屉柜&#x27;:&#x27;拉开小抽屉，再点一下收好。&#x27;,&#x27;冰箱&#x27;:&#x27;冰箱门打开啦，再点一下关上。&#x27;,&#x27;厨房水槽&#x27;:&#x27;哗啦啦，水龙头打开了。&#x27;,&#x27;洗手台&#x27;:&#x27;搓搓小手，水流哗啦啦。&#x27;,&#x27;淋浴&#x27;:&#x27;淅沥沥，小水滴落下来啦。&#x27;,&#x27;灶台&#x27;:&#x27;小炉子亮起来啦，再点一下关闭。&#x27;,&#x27;马桶&#x27;:&#x27;冲水啦，咕噜咕噜。&#x27;,&#x27;阳台植物&#x27;:&#x27;咕噜咕噜，小叶子也喝饱啦。&#x27;,&#x27;阳台秋千&#x27;:&#x27;坐稳后，轻轻推一下秋千。&#x27;,&#x27;阳台栏杆&#x27;:&#x27;叩叩，阳台有风吹过来。&#x27;,&#x27;地毯&#x27;:&#x27;踩踩软软的地毯。&#x27;,&#x27;墙面&#x27;:&#x27;咚咚，是小屋在回应。&#x27;,&#x27;隔板&#x27;:&#x27;这里是房间的边界。&#x27;,&#x27;地板&#x27;:&#x27;嗒嗒，脚下的小地板。&#x27;,&#x27;灯串&#x27;:&#x27;星星灯换了一个颜色。&#x27;};
+ const notes={&#x27;沙发&#x27;:&#x27;软软的靠垫，轻轻弹了一下。&#x27;,&#x27;茶几&#x27;:&#x27;叩叩，木头的声音真好听。&#x27;,&#x27;床与枕头&#x27;:&#x27;枕头蓬松啦，休息一会儿。&#x27;,&#x27;书柜&#x27;:&#x27;抽出一本书，再轻轻放回去。&#x27;,&#x27;书与花瓶&#x27;:&#x27;小摆件晃了晃，书也探出头啦。&#x27;,&#x27;积木&#x27;:&#x27;一块一块，搭座小塔。&#x27;,&#x27;玩具篮&#x27;:&#x27;打开看看，里面藏着小玩具。&#x27;,&#x27;厨房柜门&#x27;:&#x27;柜门打开啦，再点一下关上。&#x27;,&#x27;抽屉柜&#x27;:&#x27;拉开小抽屉，再点一下收好。&#x27;,&#x27;冰箱&#x27;:&#x27;冰箱门打开啦，再点一下关上。&#x27;,&#x27;厨房水槽&#x27;:&#x27;哗啦啦，水龙头打开了。&#x27;,&#x27;洗手台&#x27;:&#x27;搓搓小手，水流哗啦啦。&#x27;,&#x27;淋浴&#x27;:&#x27;淅沥沥，小水滴落下来啦。&#x27;,&#x27;浴缸&#x27;:&#x27;水面轻轻荡开，小浴缸准备好啦。&#x27;,&#x27;灶台&#x27;:&#x27;小炉子亮起来啦，再点一下关闭。&#x27;,&#x27;马桶&#x27;:&#x27;冲水啦，咕噜咕噜。&#x27;,&#x27;阳台植物&#x27;:&#x27;咕噜咕噜，小叶子也喝饱啦。&#x27;,&#x27;阳台秋千&#x27;:&#x27;坐稳后，轻轻推一下秋千。&#x27;,&#x27;阳台栏杆&#x27;:&#x27;叩叩，阳台有风吹过来。&#x27;,&#x27;地毯&#x27;:&#x27;踩踩软软的地毯。&#x27;,&#x27;墙面&#x27;:&#x27;咚咚，是小屋在回应。&#x27;,&#x27;隔板&#x27;:&#x27;这里是房间的边界。&#x27;,&#x27;地板&#x27;:&#x27;嗒嗒，脚下的小地板。&#x27;,&#x27;灯串&#x27;:&#x27;星星灯换了一个颜色。&#x27;};
  const legacy={&#x27;台灯&#x27;:&#x27;开关小屋暖灯&#x27;,&#x27;绿植&#x27;:&#x27;给小植物浇水&#x27;,&#x27;风铃&#x27;:&#x27;轻拨窗边风铃&#x27;,&#x27;圆窗&#x27;:&#x27;切换午后与星夜&#x27;,&#x27;音乐盒&#x27;:&#x27;转动音乐盒&#x27;,&#x27;泡泡瓶&#x27;:&#x27;吹一串泡泡&#x27;};
  const immobile=new Set([&#x27;地板&#x27;,&#x27;墙面&#x27;,&#x27;隔板&#x27;,&#x27;阳台栏杆&#x27;]);
  for(const m of group.children){if(!m.isMesh||!m.userData.item)continue;const tag=m.userData.item,key=tag+(tag===&#x27;阳台植物&#x27;?(m.position.x&lt;-2.1?&#x27;左&#x27;:&#x27;右&#x27;):&#x27;&#x27;)+&#x27;:&#x27;+(m.position.x&lt; -1?&#x27;L&#x27;:m.position.x&gt;1?&#x27;R&#x27;:&#x27;C&#x27;)+&#x27;:&#x27;+(m.position.z&lt;-.6?&#x27;B&#x27;:m.position.z&gt;.6?&#x27;F&#x27;:&#x27;M&#x27;);let e=entries.get(key);if(!e){e={key,tag,parts:[],active:false,age:99,open:0};entries.set(key,e);}e.parts.push({m,p:m.position.clone(),r:m.rotation.clone(),s:m.scale.clone()});m.userData.interaction=e;}
@@ -1428,12 +1428,12 @@ window.createHouseInteractions=function(THREE,group){
     else if(m.userData.slide){m.position.z+=e.open*m.userData.slide;}
     else if(/柜门|抽屉柜|冰箱/.test(e.tag)){}
     else if(e.tag===&#x27;床与枕头&#x27;){if(m.geometry.type===&#x27;SphereGeometry&#x27;)m.scale.y=p.s.y*(1+bounce*.16);}
-    else if(e.tag===&#x27;马桶&#x27;){if(m.geometry.type===&#x27;CylinderGeometry&#x27;){m.rotation.x=-e.open*.9;m.position.y+=e.open*.06;}}
+    else if(e.tag===&#x27;马桶&#x27;){if(m.userData.flushWater){m.rotation.y=clock*4;m.scale.x=p.s.x*(1-.18*e.open);m.position.y-=.012*e.open;}}else if(e.tag===&#x27;浴缸&#x27;){if(m.userData.bathWater)m.position.y+=Math.sin(clock*3)*.003*e.open;}
     else if(e.tag===&#x27;书柜&#x27;){if(m.geometry.type===&#x27;BoxGeometry&#x27;&amp;&amp;m.geometry.parameters.width&lt;.08)m.position.z+=e.open*.08;}
-    else if(![&#x27;沙发&#x27;,&#x27;电视&#x27;,&#x27;阳台植物&#x27;,&#x27;绿植&#x27;,&#x27;厨房水槽&#x27;,&#x27;洗手台&#x27;,&#x27;淋浴&#x27;,&#x27;灶台&#x27;,&#x27;阳台秋千&#x27;,&#x27;积木&#x27;,&#x27;床与枕头&#x27;].includes(e.tag)){m.position.y+=bounce*.018;m.rotation.z+=bounce*.025;}
+    else if(![&#x27;沙发&#x27;,&#x27;电视&#x27;,&#x27;阳台植物&#x27;,&#x27;绿植&#x27;,&#x27;厨房水槽&#x27;,&#x27;洗手台&#x27;,&#x27;淋浴&#x27;,&#x27;灶台&#x27;,&#x27;浴缸&#x27;,&#x27;阳台秋千&#x27;,&#x27;积木&#x27;,&#x27;床与枕头&#x27;].includes(e.tag)){m.position.y+=bounce*.018;m.rotation.z+=bounce*.025;}
    }
    if(e.tag===&#x27;电视&#x27;)for(const p of e.parts){if(p.m.geometry.parameters.width&lt;.02){p.m.material.emissiveIntensity=window.WakukuDaily?.type===&#x27;tv&#x27;&amp;&amp;window.WakukuDaily?.stage===&#x27;perform&#x27;?.55+.15*Math.sin(clock*2):0;}}
-   const watering=/水槽|洗手台|淋浴|植物|绿植|马桶/.test(e.tag),running=watering?e.active&amp;&amp;e.age&lt;4:e.age&lt;1.2;e.effects.visible=running;
+   const watering=/水槽|洗手台|淋浴|植物|绿植|马桶/.test(e.tag),running=watering?e.active&amp;&amp;e.age&lt;4:e.age&lt;1.2;e.effects.visible=running&amp;&amp;e.tag!==&#x27;马桶&#x27;&amp;&amp;e.tag!==&#x27;浴缸&#x27;;
    if(running){e.effects.position.copy(e.center);for(let i=0;i&lt;e.drops.length;i++){const d=e.drops[i],f=(clock*1.7+i/9)%1;d.position.set(Math.sin(i*2.4)*.07,watering?.15-f*.24:.08+f*.17,Math.cos(i*2.4)*.07);d.scale.set(1,watering?2:1,1);}}
    if(watering&amp;&amp;e.age&gt;4)e.active=false;
   }
@@ -1519,7 +1519,13 @@ window.createWakukuRoom=function(THREE,scene){
  item=&#x27;积木&#x27;;
  for(let i=0;i&lt;4;i++)box(-.65+i*.13,.065,1.9,.11,.12,.11,[sage,terra,lightWood,cream][i]);
  item=&#x27;玩具篮&#x27;;
- cylinder(.55,.11,1.9,.17,.14,.2,terra);orb(.55,.24,1.9,.13,.08,.12,cream);
+ // Open woven basket, with visible toys rather than an opaque round lid.
+ const basketMat=mat(&#x27;#b99873&#x27;),basketInner=mat(&#x27;#8d745b&#x27;);
+ cylinder(.55,.025,1.9,.145,.14,.025,basketInner);
+ for(let i=0;i&lt;32;i++){const a=i*Math.PI/16;const slat=box(.55+Math.cos(a)*.155,.11,1.9+Math.sin(a)*.155,.012,.19,.018,basketMat);slat.rotation.y=-a;}
+ for(const y of [.035,.065,.095,.125,.155,.195]){const ring=mesh(new THREE.TorusGeometry(.158,.007,6,40),basketMat,.55,y,1.9);ring.rotation.x=Math.PI/2;}
+ orb(.50,.16,1.91,.060,.06,.060,mat(&#x27;#a8c6ca&#x27;));box(.59,.15,1.87,.070,.08,.07,terra);
+ orb(.60,.20,1.96,.045,.045,.04,cream);for(const x of [.58,.62])orb(x,.26,1.96,.013,.04,.012,cream);
  item=&#x27;隔板&#x27;;
  // Room partitions: door openings face the unobstructed central corridor.
  const partition=mat(&#x27;#e1d3bd&#x27;),tile=mat(&#x27;#c6d8d2&#x27;),blue=mat(&#x27;#b7caca&#x27;);
@@ -1555,10 +1561,30 @@ window.createWakukuRoom=function(THREE,scene){
  // Bathroom: tiled floor, shower tray and screen, toilet and vanity.
  box(2.13,.008,1.72,2.25,.018,2.0,tile);
  for(let i=0;i&lt;8;i++){box(1.05+i*.29,.02,1.72,.008,.003,2,cream);box(2.13,.02,.78+i*.26,2.25,.003,.008,cream);}
- item=&#x27;淋浴&#x27;;
- box(2.78,.07,2.17,.75,.12,.85,cream);const glass=mat(&#x27;#c6e0dc&#x27;,{transparent:true,opacity:.28,depthWrite:false});box(2.36,.78,2.17,.025,1.38,.85,glass);cylinder(3.03,1.05,2.43,.013,.013,.75,wood,12);orb(3.03,1.43,2.37,.065,.015,.07,wood);
- item=&#x27;马桶&#x27;;
- orb(1.45,.23,2.22,.18,.23,.24,cream);const seat=cylinder(1.45,.43,2.18,.18,.17,.04,cream);seat.scale.z=1.3;box(1.45,.55,2.45,.34,.43,.14,cream);
+ // Curved porcelain shells have actual interior cavities, rims and separate fittings.
+ const porcelain=mat(&#x27;#f5f0e3&#x27;,{roughness:.33}),inside=mat(&#x27;#dbe7df&#x27;,{roughness:.38}),metal=mat(&#x27;#bb9d67&#x27;,{metalness:.65,roughness:.30}),bathWater=mat(&#x27;#9dc9cc&#x27;,{transparent:true,opacity:.64,roughness:.22});
+ function shell(x,z,profile,sx,sz,material){const o=mesh(new THREE.LatheGeometry(profile.map(p=&gt;new THREE.Vector2(...p)),48),material,x,0,z);o.scale.set(sx,1,sz);return o;}
+ function ovalRim(x,y,z,r,thick,sx,sz,material){const o=mesh(new THREE.TorusGeometry(r,thick,10,64),material,x,y,z);o.rotation.x=Math.PI/2;o.scale.set(sx,sz,1);return o;}
+ item=&#x27;浴缸&#x27;;
+ shell(2.78,2.12,[[0,.045],[.22,.045],[.29,.09],[.35,.25],[.37,.40],[.36,.43],[.32,.43],[.31,.37],[.27,.16],[.20,.11],[0,.11]],1,1.4,porcelain);
+ ovalRim(2.78,.425,2.12,.345,.023,1,1.4,porcelain);
+ const tubWater=cylinder(2.78,.255,2.12,.29,.29,.007,bathWater,48);tubWater.scale.z=1.4;tubWater.userData.bathWater=true;
+ cylinder(3.03,.48,2.40,.015,.015,.46,metal,14);box(3.03,.70,2.32,.03,.03,.18,metal);cylinder(3.03,.66,2.235,.02,.02,.05,metal,14);
+ for(const x of [2.94,3.12]){cylinder(x,.48,2.40,.026,.026,.025,metal,12);box(x,.50,2.40,.065,.012,.014,metal);}
+ const bathDrain=cylinder(2.78,.117,2.12,.027,.027,.007,metal,16);
+ box(2.43,.455,2.09,.10,.045,.26,mat(&#x27;#dec9b3&#x27;));for(let i=0;i&lt;3;i++)box(2.43,.48+i*.009,2.09,.095,.012,.24,cream);
+ item=&#x27;马桶&#x27;;const toiletStart=group.children.length;
+ cylinder(1.45,.035,2.20,.115,.15,.05,porcelain,40);
+ shell(1.45,2.20,[[0,.05],[.095,.05],[.080,.18],[.15,.23],[.19,.34],[.18,.38],[.145,.38],[.125,.32],[.070,.24],[0,.23]],1,1.3,porcelain);
+ ovalRim(1.45,.385,2.18,.165,.023,1,1.30,porcelain);
+ const bowlWater=cylinder(1.45,.255,2.19,.075,.075,.006,mat(&#x27;#8abdc4&#x27;,{roughness:.3}),32);bowlWater.scale.z=1.22;bowlWater.userData.flushWater=true;
+ box(1.45,.46,2.47,.32,.52,.14,porcelain);box(1.45,.73,2.47,.35,.035,.17,porcelain);
+ cylinder(1.52,.755,2.47,.024,.024,.012,metal,16);
+ // Raised lid against the tank makes the open seat and bowl unmistakable.
+ orb(1.45,.575,2.365,.175,.185,.025,porcelain);
+ for(const x of [1.35,1.55])cylinder(x,.398,2.36,.022,.022,.035,metal,12);
+ box(1.13,.48,2.28,.025,.025,.18,metal);const paper=cylinder(1.13,.48,2.22,.055,.055,.12,cream,24);paper.rotation.z=Math.PI/2;
+ for(const o of group.children.slice(toiletStart))o.position.z=4.4-o.position.z;
  item=&#x27;洗手台&#x27;;
  box(2.85,.35,1.0,.66,.65,.43,wood);orb(2.85,.70,1,.29,.065,.18,cream);cylinder(2.85,.80,1.16,.012,.012,.18,wood,12);
  item=&#x27;地板&#x27;;
