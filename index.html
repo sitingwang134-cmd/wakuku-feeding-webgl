@@ -22,8 +22,22 @@ html,body{margin:0!important;width:100%!important;height:100%!important;overflow
 #game{display:block!important;width:100%!important;height:100%!important;outline:none;touch-action:none}
 .game-gear{position:fixed;right:calc(max(0px,(100vw - 56.25dvh)/2) + 19px);top:max(19px,env(safe-area-inset-top));width:44px;height:44px;border:0;border-radius:50%;background:#fff9e6b3;color:#68795a;font:25px system-ui;z-index:30;cursor:pointer}
 .game-settings{position:fixed;z-index:40;inset:0;background:#e7e8d6f5;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:22px;padding:25px;color:#375344;backdrop-filter:blur(12px)}.game-settings[hidden]{display:none}.game-settings h2{font:26px system-ui;margin:0}.settings-controls{display:grid;gap:12px;width:min(280px,90vw)}.game-settings button{min-height:48px;border:0;border-radius:18px;background:#fcf4df;color:#375344;font:15px system-ui;cursor:pointer}.game-settings .return-game{background:#597657;color:white;padding:12px 50px}.game-settings a{font:12px system-ui;color:#7d8a72}.settings-controls label{font:13px system-ui;display:flex;align-items:center;justify-content:center;gap:10px}.game-settings input{width:20px;height:20px}
+&lt;/style&gt;&lt;style&gt;
+body:not(.wakuku-loaded)&gt;:not(#wakuku-boot){visibility:hidden!important}
+#wakuku-boot{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#ede6d5;color:#486359;font-family:system-ui,sans-serif;text-align:center;padding:24px;box-sizing:border-box}
+#wakuku-boot[hidden]{display:none}#wakuku-boot h1{font-size:28px;margin:0 0 14px}#boot-status{font-size:14px;color:#7e806e}#boot-retry{margin-top:20px;min-width:100px;min-height:44px;border:0;border-radius:24px;background:#486359;color:#fff7e7}
+.boot-orb{width:30px;height:30px;margin-bottom:24px;border:3px solid #d1d4bb;border-top-color:#65826c;border-radius:50%;animation:boot-spin 1.2s linear infinite}@keyframes boot-spin{to{transform:rotate(360deg)}}
 &lt;/style&gt;&lt;/head&gt;
 &lt;body class=&quot;only-game&quot;&gt;
+&lt;div id=&quot;wakuku-boot&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;div class=&quot;boot-orb&quot;&gt;&lt;/div&gt;&lt;h1&gt;苔苔的小屋&lt;/h1&gt;&lt;p id=&quot;boot-status&quot;&gt;正在准备小屋，请稍候…&lt;/p&gt;&lt;button id=&quot;boot-retry&quot; hidden&gt;重新加载&lt;/button&gt;&lt;/div&gt;&lt;script&gt;/* Paint a single loading screen before any legacy canvas or room controls appear. */
+(()=&gt;{
+ const panel=document.getElementById(&#x27;wakuku-boot&#x27;),status=document.getElementById(&#x27;boot-status&#x27;),retry=document.getElementById(&#x27;boot-retry&#x27;);let done=false;
+ const timer=setTimeout(()=&gt;{if(!done){status.textContent=&#x27;加载时间有点长，请检查网络后重试。&#x27;;retry.hidden=false;}},45000);
+ retry.onclick=()=&gt;location.reload();
+ window.WakukuBoot={phase(text){if(!done)status.textContent=text;},ready(){if(done)return;done=true;clearTimeout(timer);document.body.classList.add(&#x27;wakuku-loaded&#x27;);panel.hidden=true;document.body.dataset.boot=&#x27;ready&#x27;;},fail(text){done=false;clearTimeout(timer);document.body.classList.remove(&#x27;wakuku-loaded&#x27;);panel.hidden=false;status.textContent=text||&#x27;小屋加载失败，请点重试。&#x27;;retry.hidden=false;document.body.dataset.boot=&#x27;error&#x27;;}};
+ window.addEventListener(&#x27;error&#x27;,e=&gt;{if(!done&amp;&amp;(e.target?.tagName===&#x27;SCRIPT&#x27;||e.message))window.WakukuBoot.fail(&#x27;游戏资源加载失败，请检查网络后重试。&#x27;);},true);
+})();
+&lt;/script&gt;
 &lt;header&gt;&lt;div class=&quot;wrap bar&quot;&gt;&lt;a class=&quot;brand&quot; href=&quot;#top&quot;&gt;WAKUKU&lt;/a&gt;&lt;div class=&quot;edition&quot;&gt;QUALITY STUDY / 03&lt;br&gt;四类游戏 · 品质目标 · 2026.10.29&lt;/div&gt;&lt;nav&gt;&lt;a href=&quot;#playroom&quot;&gt;实际玩一下&lt;/a&gt;&lt;a href=&quot;#standards&quot;&gt;品质标杆&lt;/a&gt;&lt;a href=&quot;#screens&quot;&gt;运行画面&lt;/a&gt;&lt;a href=&quot;#audience&quot;&gt;女性用户动机&lt;/a&gt;&lt;a href=&quot;#decision&quot;&gt;比较选择&lt;/a&gt;&lt;button onclick=&quot;window.print()&quot;&gt;打印 / PDF ↗&lt;/button&gt;&lt;/nav&gt;&lt;/div&gt;&lt;/header&gt;
 &lt;main id=&quot;top&quot;&gt;
 &lt;div class=&quot;wrap&quot;&gt;
@@ -1923,18 +1937,22 @@ window.installTripoFurniture=function(THREE,GLTFLoader,room){
  const oldReset=reset;reset=function(...args){endDaily();window.WakukuDaily=null;cancel.hidden=true;push.hidden=true;swing.angle=swing.velocity=0;oldReset(...args);window.WakukuDoll?.resetGroundBall?.();};
 })();
 &lt;/script&gt;
-&lt;script src=&quot;model-part-00.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-01.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-02.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-03.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-04.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-05.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-06.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-07.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-08.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-09.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-10.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-11.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-12.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-13.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-14.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;wakuku_doll_glb.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;doll-mobile-4bcaf23dcc.js&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;wakuku-runtime.js&quot;&gt;&lt;/script&gt;&lt;script&gt;
 const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
 
   const container = document.getElementById(&quot;wakuku-doll&quot;);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  let graphicsLost=false;
+  const mobileDevice=matchMedia(&#x27;(pointer:coarse)&#x27;).matches;
+  window.WakukuBoot.phase(&#x27;正在布置小屋…&#x27;);
+  const renderer = new THREE.WebGLRenderer({ antialias: !mobileDevice, alpha: true, powerPreference:&#x27;high-performance&#x27; });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, mobileDevice?1.25:2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
+  renderer.domElement.addEventListener(&#x27;webglcontextlost&#x27;,e=&gt;{e.preventDefault();graphicsLost=true;window.WakukuBoot.fail(&#x27;画面暂时中断，请点重新加载回到小屋。&#x27;);});
   renderer.domElement.style.cssText = &quot;width:100%;height:100%;display:block;touch-action:none;cursor:pointer;pointer-events:none&quot;;
 
   const scene = new THREE.Scene();scene.background=new THREE.Color(&quot;#e9dfc7&quot;);
@@ -2038,6 +2056,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
   function socket(name){const b=bone(name);return b?planePoint(b.getWorldPosition(new THREE.Vector3())):null;}
   function play(name){if(!(name in durations))throw new Error(`Unknown WAKUKU action: ${name}`);current=name;started=performance.now();}
   window.WakukuDoll={setRoomMood:n=&gt;{window.WakukuRoomMood=n;key.color.setRGB(1,.83-n*.08,.65+n*.2);renderer.toneMappingExposure=1-n*.10;},setAtmosphere:on=&gt;{window.WakukuRoomLamp=on;rim.intensity=on?.65:.22;key.intensity=on?1.6:1.4;},play,setState:s=&gt;Object.assign(state,s),getSocket:()=&gt;heldBall.visible?planePoint(heldBall.position):socket((state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;)+&#x27;HandMiddle1&#x27;),interactRoom:p=&gt;{const ndc=new THREE.Vector2(p.x/432*2-1,1-p.y/(768*.82)*2);return roomPets.pick(camera,ndc)||roomModel.pick(camera,ndc,pivot);},resetGroundBall:()=&gt;ballAnchor.set(.35,.042,.15),getGroundBallWorld:()=&gt;({x:ballAnchor.x,z:ballAnchor.z}),getGroundBall:()=&gt;groundBall.visible?planePoint(groundBall.position):null,getMouth:()=&gt;ready?planePoint(bone(&#x27;Head&#x27;).localToWorld(mouthLocal.clone())):null};
+  window.WakukuBoot.phase(&#x27;正在唤醒苔苔…&#x27;);
   new GLTFLoader().load(window.WAKUKU_DOLL_GLB_URL,gltf=&gt;{
     gltf.scene.traverse(o=&gt;{
       if(o.isMesh){
@@ -2061,9 +2080,10 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
     for(const [name,b] of Object.entries(bones))rest[name]={p:b.position.clone(),q:b.quaternion.clone(),world:b.getWorldQuaternion(new THREE.Quaternion())};
     for(const side of [&#x27;Left&#x27;,&#x27;Right&#x27;])footTargets[side]=bone(side+&#x27;Foot&#x27;).getWorldPosition(new THREE.Vector3());
     mouthLocal.copy(bone(&#x27;Head&#x27;).worldToLocal(new THREE.Vector3(0,.492,.145)));
+    delete window.WAKUKU_DOLL_GLB_URL;
     ready=true;container.dataset.joints=String(Object.keys(bones).length);container.dataset.action=&#x27;idle&#x27;;
     container.dispatchEvent(new CustomEvent(&#x27;wakuku:ready&#x27;,{bubbles:true}));
-  },undefined,()=&gt;{container.dataset.error=&#x27;model-load&#x27;;container.setAttribute(&#x27;aria-label&#x27;,&#x27;模型未加载，请检查同目录模型 JS 和网络连接&#x27;);});
+  },undefined,()=&gt;{container.dataset.error=&#x27;model-load&#x27;;container.setAttribute(&#x27;aria-label&#x27;,&#x27;角色模型加载失败&#x27;);window.WakukuBoot.fail(&#x27;苔苔没能加载出来，请检查网络后重试。&#x27;);});
   let dragX=null,downX=0,turn=0,turnVel=0;
   renderer.domElement.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{dragX=downX=e.clientX;turnVel=0;e.target.setPointerCapture(e.pointerId);});
   renderer.domElement.addEventListener(&#x27;pointermove&#x27;,e=&gt;{if(dragX!==null){turn+=(e.clientX-dragX)*.01;dragX=e.clientX;}});
@@ -2196,6 +2216,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
     if(heldBall.visible){heldBall.position.copy(bone((state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;)+&#x27;HandMiddle1&#x27;).getWorldPosition(new THREE.Vector3())).add(new THREE.Vector3(0,-.015,.045));}
     roomModel.alignControls(camera,pivot.position);
     renderer.render(scene,camera);
+    if(ready&amp;&amp;!graphicsLost)window.WakukuBoot.ready();
   });
 &lt;/script&gt;
 
