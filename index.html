@@ -1477,9 +1477,32 @@ window.createWakukuRoom=function(THREE,scene){
  window.WakukuHouseCollision=(x,z)=&gt;{const r=.15;if(x&lt; -3.12||x&gt;3.12||z&lt; -2.48||z&gt;2.48)return true;return obstacles.some(b=&gt;x+r&gt;b.x0&amp;&amp;x-r&lt;b.x1&amp;&amp;z+r&gt;b.z0&amp;&amp;z-r&lt;b.z1);};
  group.userData.assetSource=&#x27;Procedural original geometry&#x27;;
  const anchors={&#x27;开关小屋暖灯&#x27;:[.44,.79,-.40],&#x27;给小植物浇水&#x27;:[-.48,.25,-.25],&#x27;轻拨窗边风铃&#x27;:[-.435,1.02,-.54],&#x27;切换午后与星夜&#x27;:[-.43,1.08,-.677],&#x27;转动音乐盒&#x27;:[.47,.105,.15],&#x27;吹一串泡泡&#x27;:[-.47,.065,.40]};
+ // Keep collision footprints above intact; presentation uses low cutaway partitions.
+ const cutaways=[];group.updateMatrixWorld(true);
+ for(const o of group.children){const interior=o.material===partition,lintel=Math.abs(Math.abs(o.position.z)-.66)&lt;.001&amp;&amp;o.position.y&gt;1.4;
+  if(interior||lintel||(o.geometry?.type===&#x27;BoxGeometry&#x27;&amp;&amp;o.geometry.parameters.height&gt;1.3)||Math.abs(o.position.z-2.65)&lt;.001){
+   const material=o.material.clone();o.material=material;
+   cutaways.push({mesh:o,interior,lintel,opacity:material.opacity,transparent:material.transparent,depthWrite:material.depthWrite,castShadow:o.castShadow,y:o.position.y,scale:o.scale.y,height:o.geometry.parameters.height||1,box:new THREE.Box3().setFromObject(o).expandByScalar(.12)});
+  }
+ }
  const controls={};
- return {alignControls(camera,player){const aim=player.clone().add(new THREE.Vector3(0,.48,0));const ray=new THREE.Ray(camera.position.clone(),aim.clone().sub(camera.position).normalize()),length=camera.position.distanceTo(aim);
- for(const o of group.children){if(o.material===partition||(o.geometry?.type===&#x27;BoxGeometry&#x27;&amp;&amp;o.geometry.parameters.height&gt;1.3)||Math.abs(o.position.z-2.65)&lt;.001||(Math.abs(Math.abs(o.position.z)-.66)&lt;.001&amp;&amp;o.position.y&gt;1.4)){o.visible=true;const hit=ray.intersectBox(new THREE.Box3().setFromObject(o).expandByScalar(.18),new THREE.Vector3());if(!window.WakukuHouseOverview&amp;&amp;hit&amp;&amp;camera.position.distanceTo(hit)&lt;length)o.visible=false;}}
+ return {alignControls(camera,player){
+  const overview=!!window.WakukuHouseOverview;
+  for(const c of cutaways){const o=c.mesh;o.visible=true;
+   o.scale.y=c.scale;o.position.y=c.y;o.material.opacity=c.opacity;o.material.transparent=c.transparent;o.material.depthWrite=c.depthWrite;o.castShadow=c.castShadow;
+   if(!overview&amp;&amp;c.lintel){o.visible=false;continue;}
+   if(!overview&amp;&amp;c.interior){o.scale.y=c.scale*.22/c.height;o.position.y=c.y-c.height*c.scale/2+.11;o.material.opacity=.36;o.material.transparent=true;o.material.depthWrite=false;o.castShadow=false;continue;}
+   if(!overview){
+    // Cover the full head/body and walking space, not only a ray through the chest.
+    let blocked=false;
+    for(const [dx,dy,dz] of [[0,.85,0],[0,.45,0],[0,.1,0],[-.4,.5,0],[.4,.5,0],[0,.5,-.4],[0,.5,.4]]){
+     const aim=player.clone().add(new THREE.Vector3(dx,dy,dz)),direction=aim.clone().sub(camera.position),length=direction.length();
+     const hit=new THREE.Ray(camera.position.clone(),direction.normalize()).intersectBox(c.box,new THREE.Vector3());
+     if(hit&amp;&amp;camera.position.distanceTo(hit)&lt;length){blocked=true;break;}
+    }
+    if(blocked){o.material.transparent=true;o.material.opacity=.08;o.material.depthWrite=false;o.castShadow=false;}
+   }
+  }
  for(const [label,xyz] of Object.entries(anchors)){const b=controls[label]||=document.querySelector(`[aria-label=&quot;${label}&quot;]`);if(!b)continue;const v=new THREE.Vector3(xyz[0],xyz[1],xyz[2]&lt;( -.2)?xyz[2]-1.85:xyz[2]).project(camera);b.hidden=window.WakukuHouseOverview||v.x &lt; -1.05 || v.x &gt; 1.05 || v.y &lt; -1 || v.y &gt; 1; b.style.left=`${(v.x+1)*50}%`;b.style.top=`${(1-v.y)*41}%`;b.style.transform=&#x27;translate(-50%,-50%)&#x27;;}},update(night,lamp,time,music){glow.intensity=lamp?.34:0;shade.emissiveIntensity=lamp?.2:0;sky.color.set(night&gt;.5?&#x27;#667e9c&#x27;:&#x27;#b9d8d0&#x27;);bird.rotation.y=music?time*2:0;for(let i=0;i&lt;bells.length;i++)bells[i].rotation.z=Math.sin(time*1.5+i)*.025;}};
 };
 &lt;/script&gt;
