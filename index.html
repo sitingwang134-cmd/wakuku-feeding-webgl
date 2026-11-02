@@ -1312,6 +1312,20 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
   else if(Math.abs(walk.z)&gt;.1*S)walk.path.push([fetcher.x,0]);
   walk.path.push([x*S,0],[x*S,z*S]);walk.marker=2;if(dollSleeping)playDollAction(&#x27;tap&#x27;);toast(&#x27;一起去&#x27;+name+&#x27;看看吧。&#x27;);
  }
+ // Route daily actions through the same furniture collision map as manual walking.
+ window.WakukuNavigateTo=function(x,z){
+  if(!available())return false;
+  const step=.10,NX=63,NZ=51,at=(i,j)=&gt;[-3.1+i*step,-2.5+j*step];
+  const cell=(x,z)=&gt;[clamp(Math.round((x+3.1)/step),0,NX-1),clamp(Math.round((z+2.5)/step),0,NZ-1)];
+  const start=cell(fetcher.x/S,walk.z/S),end=cell(x,z),key=(i,j)=&gt;j*NX+i;
+  const queue=[start],seen=new Map([[key(...start),null]]);let found=null;
+  for(let n=0;n&lt;queue.length;n++){const a=queue[n];if(a[0]===end[0]&amp;&amp;a[1]===end[1]){found=a;break;}
+   for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]){const i=a[0]+di,j=a[1]+dj,k=key(i,j);if(i&lt;0||i&gt;=NX||j&lt;0||j&gt;=NZ||seen.has(k))continue;const [px,pz]=at(i,j);if(window.WakukuHouseCollision?.(px,pz))continue;seen.set(k,a);queue.push([i,j]);}}
+  if(!found)return false;
+  const route=[];for(let a=found;a; a=seen.get(key(...a)))route.unshift(at(...a).map(v=&gt;v*S));route.shift();
+  for(let i=route.length-2;i&gt;0;i--){const a=route[i-1],b=route[i],c=route[i+1];if((b[0]-a[0])*(c[1]-b[1])===(b[1]-a[1])*(c[0]-b[0]))route.splice(i,1);}
+  stop();window.WakukuHouseOverview=false;walk.path=route;walk.marker=2;if(dollSleeping)playDollAction(&#x27;tap&#x27;);return true;
+ };
  const nav=document.createElement(&#x27;div&#x27;);nav.setAttribute(&#x27;aria-label&#x27;,&#x27;小屋地图&#x27;);nav.style.cssText=&#x27;position:absolute;z-index:14;left:5%;top:25%;width:90%;display:flex;justify-content:center;gap:4px&#x27;;
  for(const name of Object.keys(rooms)){const b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.textContent=name;b.setAttribute(&#x27;aria-label&#x27;,&#x27;走到&#x27;+name);b.style.cssText=&#x27;font-size:11px;min-height:36px;padding:5px 9px;border:1px solid #c4ae8570;border-radius:18px;background:#fff6dfdc;color:#6d624e;box-shadow:none&#x27;;b.onclick=()=&gt;visit(name);nav.append(b);}const overview=document.createElement(&#x27;button&#x27;);overview.textContent=&#x27;全屋&#x27;;overview.type=&#x27;button&#x27;;overview.setAttribute(&#x27;aria-label&#x27;,&#x27;查看全屋&#x27;);overview.style.cssText=&#x27;font-size:11px;min-height:36px;padding:5px 8px;border:1px solid #c4ae8570;border-radius:18px;background:#fff6dfdc;color:#6d624e;box-shadow:none&#x27;;overview.onclick=()=&gt;{if(!available())return;stop();window.WakukuHouseOverview=!window.WakukuHouseOverview;toast(window.WakukuHouseOverview?&#x27;这是我们的小家，想去哪里看看？&#x27;:&#x27;回到苔苔身边。&#x27;);};nav.append(overview);document.body.append(nav);
  const floor=document.createElement(&#x27;button&#x27;);floor.type=&#x27;button&#x27;;floor.setAttribute(&#x27;aria-label&#x27;,&#x27;点击地面，让苔苔走过去&#x27;);floor.style.cssText=&#x27;position:absolute;left:8%;top:76.5%;width:84%;height:5.5%;z-index:12;background:transparent;border:0;box-shadow:none;outline:none;touch-action:manipulation;cursor:pointer;padding:0&#x27;;document.body.append(floor);canvas.style.cssText+=&#x27;;position:relative;z-index:1;background:transparent&#x27;;
@@ -1386,7 +1400,7 @@ window.createHouseInteractions=function(THREE,group){
  const notes={&#x27;沙发&#x27;:&#x27;软软的靠垫，轻轻弹了一下。&#x27;,&#x27;茶几&#x27;:&#x27;叩叩，木头的声音真好听。&#x27;,&#x27;床与枕头&#x27;:&#x27;枕头蓬松啦，休息一会儿。&#x27;,&#x27;书柜&#x27;:&#x27;抽出一本书，再轻轻放回去。&#x27;,&#x27;书与花瓶&#x27;:&#x27;小摆件晃了晃，书也探出头啦。&#x27;,&#x27;积木&#x27;:&#x27;咔哒，积木跳起一小步。&#x27;,&#x27;玩具篮&#x27;:&#x27;打开看看，里面藏着小玩具。&#x27;,&#x27;厨房柜门&#x27;:&#x27;柜门打开啦，再点一下关上。&#x27;,&#x27;抽屉柜&#x27;:&#x27;拉开小抽屉，再点一下收好。&#x27;,&#x27;冰箱&#x27;:&#x27;冰箱门打开啦，再点一下关上。&#x27;,&#x27;厨房水槽&#x27;:&#x27;哗啦啦，水龙头打开了。&#x27;,&#x27;洗手台&#x27;:&#x27;搓搓小手，水流哗啦啦。&#x27;,&#x27;淋浴&#x27;:&#x27;淅沥沥，小水滴落下来啦。&#x27;,&#x27;灶台&#x27;:&#x27;小炉子亮起来啦，再点一下关闭。&#x27;,&#x27;马桶&#x27;:&#x27;冲水啦，咕噜咕噜。&#x27;,&#x27;阳台植物&#x27;:&#x27;咕噜咕噜，小叶子也喝饱啦。&#x27;,&#x27;阳台椅子&#x27;:&#x27;小椅子轻轻摇了摇。&#x27;,&#x27;阳台栏杆&#x27;:&#x27;叩叩，阳台有风吹过来。&#x27;,&#x27;地毯&#x27;:&#x27;踩踩软软的地毯。&#x27;,&#x27;墙面&#x27;:&#x27;咚咚，是小屋在回应。&#x27;,&#x27;隔板&#x27;:&#x27;这里是房间的边界。&#x27;,&#x27;地板&#x27;:&#x27;嗒嗒，脚下的小地板。&#x27;,&#x27;灯串&#x27;:&#x27;星星灯换了一个颜色。&#x27;};
  const legacy={&#x27;台灯&#x27;:&#x27;开关小屋暖灯&#x27;,&#x27;绿植&#x27;:&#x27;给小植物浇水&#x27;,&#x27;风铃&#x27;:&#x27;轻拨窗边风铃&#x27;,&#x27;圆窗&#x27;:&#x27;切换午后与星夜&#x27;,&#x27;音乐盒&#x27;:&#x27;转动音乐盒&#x27;,&#x27;泡泡瓶&#x27;:&#x27;吹一串泡泡&#x27;};
  const immobile=new Set([&#x27;地板&#x27;,&#x27;墙面&#x27;,&#x27;隔板&#x27;,&#x27;阳台栏杆&#x27;]);
- for(const m of group.children){if(!m.isMesh||!m.userData.item)continue;const tag=m.userData.item,key=tag+&#x27;:&#x27;+(m.position.x&lt; -1?&#x27;L&#x27;:m.position.x&gt;1?&#x27;R&#x27;:&#x27;C&#x27;)+&#x27;:&#x27;+(m.position.z&lt;-.6?&#x27;B&#x27;:m.position.z&gt;.6?&#x27;F&#x27;:&#x27;M&#x27;);let e=entries.get(key);if(!e){e={key,tag,parts:[],active:false,age:99,open:0};entries.set(key,e);}e.parts.push({m,p:m.position.clone(),r:m.rotation.clone(),s:m.scale.clone()});m.userData.interaction=e;}
+ for(const m of group.children){if(!m.isMesh||!m.userData.item)continue;const tag=m.userData.item,key=tag+(tag===&#x27;阳台植物&#x27;?(m.position.x&lt;-2.1?&#x27;左&#x27;:&#x27;右&#x27;):&#x27;&#x27;)+&#x27;:&#x27;+(m.position.x&lt; -1?&#x27;L&#x27;:m.position.x&gt;1?&#x27;R&#x27;:&#x27;C&#x27;)+&#x27;:&#x27;+(m.position.z&lt;-.6?&#x27;B&#x27;:m.position.z&gt;.6?&#x27;F&#x27;:&#x27;M&#x27;);let e=entries.get(key);if(!e){e={key,tag,parts:[],active:false,age:99,open:0};entries.set(key,e);}e.parts.push({m,p:m.position.clone(),r:m.rotation.clone(),s:m.scale.clone()});m.userData.interaction=e;}
  const waterMat=new THREE.MeshBasicMaterial({color:&#x27;#a6dfe6&#x27;,transparent:true,opacity:.75});
  const sparkMat=new THREE.MeshBasicMaterial({color:&#x27;#fff0ad&#x27;,transparent:true,opacity:.8});
  for(const e of entries.values()){
@@ -1394,15 +1408,15 @@ window.createHouseInteractions=function(THREE,group){
   e.effects=new THREE.Group();group.add(e.effects);e.effects.visible=false;e.drops=[];
   for(let i=0;i&lt;9;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.009,6,4),/水槽|洗手台|淋浴|植物|绿植|马桶/.test(e.tag)?waterMat:sparkMat);e.effects.add(m);e.drops.push(m);}
   if(!immobile.has(e.tag)){
-   const b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.setAttribute(&#x27;aria-label&#x27;,&#x27;互动：&#x27;+e.tag);b.textContent=&#x27;✦&#x27;;b.title=e.tag;b.style.cssText=&#x27;position:absolute;z-index:15;width:32px;height:32px;border:1px solid #fff2bd;border-radius:50%;background:#f7db8dcc;color:#76603e;padding:0;box-shadow:0 0 9px #ffe9b5;transform:translate(-50%,-50%);touch-action:manipulation&#x27;;b.hidden=true;b.onclick=()=&gt;activate(e);document.body.append(b);e.button=b;
+   const b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.setAttribute(&#x27;aria-label&#x27;,&#x27;互动：&#x27;+e.tag);b.textContent=({&#x27;沙发&#x27;:&#x27;坐沙发&#x27;,&#x27;电视&#x27;:&#x27;看电视&#x27;,&#x27;绿植&#x27;:&#x27;给绿植浇水&#x27;,&#x27;阳台植物&#x27;:&#x27;给阳台花草浇水&#x27;,&#x27;洗手台&#x27;:&#x27;洗手&#x27;,&#x27;厨房水槽&#x27;:&#x27;厨房洗手&#x27;})[e.tag]||e.tag;b.style.cssText=&#x27;position:static;min-height:38px;border:1px solid #d8c5a2;border-radius:12px;background:#fff8e8;color:#6f5c40;padding:7px 12px;font-size:12px;box-shadow:none;touch-action:manipulation&#x27;;b.hidden=true;b.onclick=()=&gt;{if(activate(e))window.WakukuCloseObjectList?.();};document.querySelector(&#x27;#house-object-list&#x27;)?.append(b);e.button=b;
   }
  }
  const offText={&#x27;厨房柜门&#x27;:&#x27;柜门关好啦。&#x27;,&#x27;抽屉柜&#x27;:&#x27;抽屉收好啦。&#x27;,&#x27;冰箱&#x27;:&#x27;冰箱门关好啦。&#x27;,&#x27;厨房水槽&#x27;:&#x27;水龙头关上啦。&#x27;,&#x27;洗手台&#x27;:&#x27;水龙头关好啦。&#x27;,&#x27;淋浴&#x27;:&#x27;小水滴停下来啦。&#x27;,&#x27;灶台&#x27;:&#x27;炉子关好啦。&#x27;,&#x27;床与枕头&#x27;:&#x27;休息好了，再一起玩吧。&#x27;,&#x27;书柜&#x27;:&#x27;把书轻轻放回去。&#x27;,&#x27;灯串&#x27;:&#x27;星星灯恢复啦。&#x27;};
- function activate(e){if(window.WakukuHouseCanInteract&amp;&amp;!window.WakukuHouseCanInteract())return false;e.active=!e.active;e.age=0;
+ function activate(e){if(window.WakukuDailyRequest?.(e.tag,e.center.clone(),()=&gt;{e.active=true;e.age=0;},()=&gt;{e.active=false;e.age=99;}))return true;if(window.WakukuHouseCanInteract&amp;&amp;!window.WakukuHouseCanInteract())return false;e.active=!e.active;e.age=0;
   if(/灶台|灯串/.test(e.tag))for(const p of e.parts){if(!p.ownMaterial){p.m.material=p.m.material.clone();p.ownMaterial=true;}p.m.material.emissive?.set(e.active?&#x27;#e9a14d&#x27;:&#x27;#000000&#x27;);p.m.material.emissiveIntensity=e.active?.65:0;}
   window.dispatchEvent(new CustomEvent(&#x27;wakuku:house-action&#x27;,{detail:{tag:e.tag,key:e.key,active:e.active,text:(!e.active&amp;&amp;offText[e.tag])||notes[e.tag]||&#x27;轻轻碰一下，它回应啦。&#x27;,legacy:legacy[e.tag]}}));return true;
  }
- return {pick(camera,point,actor){group.updateMatrixWorld(true);ray.setFromCamera(point,camera);const hits=ray.intersectObjects(group.children,false).filter(h=&gt;h.object.visible&amp;&amp;h.object.material.opacity&gt;.12&amp;&amp;h.object.userData.interaction);if(!hits.length)return false;const doll=ray.intersectObject(actor,true)[0];if(doll&amp;&amp;doll.distance&lt;hits[0].distance)return false;return activate(hits[0].object.userData.interaction);},project(camera){for(const e of entries.values()){if(!e.button)continue;const v=e.center.clone().project(camera);e.button.hidden=!window.WakukuShowObjects||window.WakukuHouseOverview||v.x&lt;-.95||v.x&gt;.95||v.y&lt;-.85||v.y&gt;.95||v.z&lt; -1||v.z&gt;1;e.button.style.left=(v.x+1)*50+&#x27;%&#x27;;e.button.style.top=(1-v.y)*41+&#x27;%&#x27;;}},update(time){const dt=Math.min(.05,Math.max(0,time-last));last=time;clock=time;
+ return {pick(camera,point,actor){group.updateMatrixWorld(true);ray.setFromCamera(point,camera);const hits=ray.intersectObjects(group.children,false).filter(h=&gt;h.object.visible&amp;&amp;h.object.material.opacity&gt;.12&amp;&amp;h.object.userData.interaction);if(!hits.length)return false;const doll=ray.intersectObject(actor,true)[0];if(doll&amp;&amp;doll.distance&lt;hits[0].distance)return false;return activate(hits[0].object.userData.interaction);},project(camera){for(const e of entries.values()){if(!e.button)continue;const v=e.center.clone().project(camera);e.button.hidden=![&#x27;沙发&#x27;,&#x27;电视&#x27;,&#x27;绿植&#x27;,&#x27;阳台植物&#x27;,&#x27;洗手台&#x27;,&#x27;厨房水槽&#x27;].includes(e.tag)&amp;&amp;(window.WakukuHouseOverview||v.x&lt;-.95||v.x&gt;.95||v.y&lt;-.85||v.y&gt;.95||v.z&lt; -1||v.z&gt;1);}},update(time){const dt=Math.min(.05,Math.max(0,time-last));last=time;clock=time;
   for(const e of entries.values()){e.age+=dt;e.open+=((e.active?1:0)-e.open)*(1-Math.exp(-dt*9));const bounce=e.age&lt;1.4?Math.sin(e.age*11)*Math.exp(-e.age*3):0;
    for(const p of e.parts){if(immobile.has(e.tag)||[&#x27;台灯&#x27;,&#x27;圆窗&#x27;,&#x27;音乐盒&#x27;,&#x27;风铃&#x27;,&#x27;灯串&#x27;].includes(e.tag))continue;const m=p.m;
     m.position.copy(p.p);m.rotation.copy(p.r);m.scale.copy(p.s);
@@ -1410,8 +1424,9 @@ window.createHouseInteractions=function(THREE,group){
     else if(e.tag===&#x27;床与枕头&#x27;){if(m.geometry.type===&#x27;SphereGeometry&#x27;)m.scale.y=p.s.y*(1+bounce*.16);}
     else if(e.tag===&#x27;马桶&#x27;){if(m.geometry.type===&#x27;CylinderGeometry&#x27;){m.rotation.x=-e.open*.9;m.position.y+=e.open*.06;}}
     else if(e.tag===&#x27;书柜&#x27;){if(m.geometry.type===&#x27;BoxGeometry&#x27;&amp;&amp;m.geometry.parameters.width&lt;.08)m.position.z+=e.open*.08;}
-    else if(![&#x27;厨房水槽&#x27;,&#x27;洗手台&#x27;,&#x27;淋浴&#x27;,&#x27;灶台&#x27;].includes(e.tag)){m.position.y+=bounce*.018;m.rotation.z+=bounce*.025;}
+    else if(![&#x27;沙发&#x27;,&#x27;电视&#x27;,&#x27;阳台植物&#x27;,&#x27;绿植&#x27;,&#x27;厨房水槽&#x27;,&#x27;洗手台&#x27;,&#x27;淋浴&#x27;,&#x27;灶台&#x27;].includes(e.tag)){m.position.y+=bounce*.018;m.rotation.z+=bounce*.025;}
    }
+   if(e.tag===&#x27;电视&#x27;)for(const p of e.parts){if(p.m.geometry.parameters.width&lt;.02){p.m.material.emissiveIntensity=window.WakukuDaily?.type===&#x27;tv&#x27;&amp;&amp;window.WakukuDaily?.stage===&#x27;perform&#x27;?.55+.15*Math.sin(clock*2):0;}}
    const watering=/水槽|洗手台|淋浴|植物|绿植|马桶/.test(e.tag),running=watering?e.active&amp;&amp;e.age&lt;4:e.age&lt;1.2;e.effects.visible=running;
    if(running){e.effects.position.copy(e.center);for(let i=0;i&lt;e.drops.length;i++){const d=e.drops[i],f=(clock*1.7+i/9)%1;d.position.set(Math.sin(i*2.4)*.07,watering?.15-f*.24:.08+f*.17,Math.cos(i*2.4)*.07);d.scale.set(1,watering?2:1,1);}}
    if(watering&amp;&amp;e.age&gt;4)e.active=false;
@@ -1538,6 +1553,15 @@ window.createWakukuRoom=function(THREE,scene){
  for(const x of [-2.9,-1.25]){box(x,.16,2.3,.36,.30,.35,terra);for(let i=0;i&lt;5;i++)orb(x+Math.sin(i*2)*.10,.40+i*.045,2.3+Math.cos(i)*.06,.08,.15,.07,green);}
  item=&#x27;阳台椅子&#x27;;
  box(-2.55,.31,1.3,.43,.06,.43,wood);box(-2.55,.58,1.50,.43,.48,.045,wood);for(const x of [-2.72,-2.38])for(const z of [1.14,1.45])box(x,.15,z,.035,.3,.035,wood);
+ for(const o of group.children)if(o.userData.item===&#x27;茶几&#x27;)o.position.z+=2.0;
+ for(const o of group.children)if(o.userData.item===&#x27;绿植&#x27;){o.position.x-=.14;o.position.z+=1.15;}
+ item=&#x27;电视&#x27;;
+ // Small television faces the lounge sofa, with a modeled frame and lit screen.
+ box(.70,.48,-1.30,.08,.48,.62,wood);
+ box(.652,.48,-1.30,.012,.39,.52,mat(&#x27;#8ca9ae&#x27;,{emissive:&#x27;#6a9d9a&#x27;,emissiveIntensity:0}));
+ box(.70,.20,-1.30,.24,.06,.52,wood);
+ const tvSun=mesh(new THREE.CircleGeometry(.055,24),mat(&#x27;#f9db8e&#x27;,{emissive:&#x27;#f9db8e&#x27;,emissiveIntensity:.35}),.64,.54,-1.42);tvSun.rotation.y=-Math.PI/2;
+ for(let i=0;i&lt;3;i++)orb(.635,.43,-1.28+i*.04,.008,.025,.055,cream);
  // Collision footprints are derived from the same meshes as the visible house.
  const obstacles=[];
  for(const o of group.children){
@@ -1549,7 +1573,7 @@ window.createWakukuRoom=function(THREE,scene){
  }
  window.WakukuHouseCollision=(x,z)=&gt;{const r=.15;if(x&lt; -3.12||x&gt;3.12||z&lt; -2.48||z&gt;2.48)return true;return obstacles.some(b=&gt;x+r&gt;b.x0&amp;&amp;x-r&lt;b.x1&amp;&amp;z+r&gt;b.z0&amp;&amp;z-r&lt;b.z1);};
  group.userData.assetSource=&#x27;Procedural original geometry&#x27;;
- const anchors={&#x27;开关小屋暖灯&#x27;:[.44,.79,-.40],&#x27;给小植物浇水&#x27;:[-.48,.25,-.25],&#x27;轻拨窗边风铃&#x27;:[-.435,1.02,-.54],&#x27;切换午后与星夜&#x27;:[-.43,1.08,-.677],&#x27;转动音乐盒&#x27;:[.47,.105,.15],&#x27;吹一串泡泡&#x27;:[-.47,.065,.40]};
+ const anchors={&#x27;开关小屋暖灯&#x27;:[.44,.79,-.40],&#x27;给小植物浇水&#x27;:[-.62,.25,-.95],&#x27;轻拨窗边风铃&#x27;:[-.435,1.02,-.54],&#x27;切换午后与星夜&#x27;:[-.43,1.08,-.677],&#x27;转动音乐盒&#x27;:[.47,.105,.15],&#x27;吹一串泡泡&#x27;:[-.47,.065,.40]};
  // Keep collision footprints above intact; presentation uses low cutaway partitions.
  const cutaways=[];group.updateMatrixWorld(true);
  for(const o of group.children){const interior=o.material===partition,lintel=Math.abs(Math.abs(o.position.z)-.66)&lt;.001&amp;&amp;o.position.y&gt;1.4;
@@ -1577,17 +1601,56 @@ window.createWakukuRoom=function(THREE,scene){
     if(blocked){o.material.transparent=true;o.material.opacity=.08;o.material.depthWrite=false;o.castShadow=false;}
    }
   }
- for(const [label,xyz] of Object.entries(anchors)){const b=controls[label]||=document.querySelector(`[aria-label=&quot;${label}&quot;]`);if(!b)continue;const v=new THREE.Vector3(xyz[0],xyz[1],xyz[2]&lt;( -.2)?xyz[2]-1.85:xyz[2]).project(camera);b.hidden=window.WakukuHouseOverview||v.x &lt; -1.05 || v.x &gt; 1.05 || v.y &lt; -1 || v.y &gt; 1; b.style.left=`${(v.x+1)*50}%`;b.style.top=`${(1-v.y)*41}%`;b.style.transform=&#x27;translate(-50%,-50%)&#x27;;}},update(night,lamp,time,music){interactions.update(time);glow.intensity=lamp?.34:0;shade.emissiveIntensity=lamp?.2:0;sky.color.set(night&gt;.5?&#x27;#667e9c&#x27;:&#x27;#b9d8d0&#x27;);bird.rotation.y=music?time*2:0;for(let i=0;i&lt;bells.length;i++)bells[i].rotation.z=Math.sin(time*1.5+i)*.025;}};
+ for(const [label,xyz] of Object.entries(anchors)){const b=controls[label]||=document.querySelector(`[aria-label=&quot;${label}&quot;]`);if(!b)continue;const v=new THREE.Vector3(xyz[0],xyz[1],label!==&#x27;给小植物浇水&#x27;&amp;&amp;xyz[2]&lt;( -.2)?xyz[2]-1.85:xyz[2]).project(camera);b.hidden=window.WakukuHouseOverview||v.x &lt; -1.05 || v.x &gt; 1.05 || v.y &lt; -1 || v.y &gt; 1; b.style.left=`${(v.x+1)*50}%`;b.style.top=`${(1-v.y)*41}%`;b.style.transform=&#x27;translate(-50%,-50%)&#x27;;}},update(night,lamp,time,music){interactions.update(time);glow.intensity=lamp?.34:0;shade.emissiveIntensity=lamp?.2:0;sky.color.set(night&gt;.5?&#x27;#667e9c&#x27;:&#x27;#b9d8d0&#x27;);bird.rotation.y=music?time*2:0;for(let i=0;i&lt;bells.length;i++)bells[i].rotation.z=Math.sin(time*1.5+i)*.025;}};
 };
 &lt;/script&gt;&lt;script&gt;/* A tap activates a room object; a drag still belongs to the orbit camera. */
 (()=&gt;{
- const hints=document.createElement(&#x27;button&#x27;);hints.textContent=&#x27;找互动 ✦&#x27;;hints.setAttribute(&#x27;aria-label&#x27;,&#x27;显示物件互动提示&#x27;);hints.setAttribute(&#x27;aria-pressed&#x27;,&#x27;false&#x27;);hints.style.cssText=&#x27;position:absolute;right:5%;top:13%;z-index:16;border:1px solid #f5dfb6;background:#fff0d1d9;border-radius:16px;color:#796449;padding:7px 10px;font-size:11px;min-height:34px&#x27;;document.body.append(hints);hints.onclick=()=&gt;{window.WakukuShowObjects=!window.WakukuShowObjects;hints.setAttribute(&#x27;aria-pressed&#x27;,String(window.WakukuShowObjects));toast(window.WakukuShowObjects?&#x27;点亮点，看看小物件会做什么。&#x27;:&#x27;直接点房间里的物件，也可以互动。&#x27;);};
- window.WakukuHouseCanInteract=()=&gt;!paused&amp;&amp;!pet.feedPhase&amp;&amp;!pet.foodDrag&amp;&amp;!ballBusy()&amp;&amp;!window.WakukuWalk?.moving;
+ const panel=document.createElement(&#x27;section&#x27;);panel.id=&#x27;house-object-panel&#x27;;panel.hidden=true;panel.setAttribute(&#x27;aria-label&#x27;,&#x27;视野中的可互动物件&#x27;);panel.style.cssText=&#x27;position:absolute;left:3%;right:3%;top:82%;height:17%;z-index:25;background:#fff6e6f5;border:1px solid #ddc7a0;border-radius:18px 18px 0 0;padding:8px 10px;box-sizing:border-box;box-shadow:0 -3px 12px #7d674f20&#x27;;
+ const title=document.createElement(&#x27;div&#x27;);title.textContent=&#x27;日常活动与附近物件 · 点击让苔苔过去&#x27;;title.style.cssText=&#x27;font-size:10px;color:#8b785e;margin:0 40px 6px 2px&#x27;;panel.append(title);
+ const list=document.createElement(&#x27;div&#x27;);list.id=&#x27;house-object-list&#x27;;list.style.cssText=&#x27;display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px;height:calc(100% - 24px);overflow:auto;overscroll-behavior:contain&#x27;;panel.append(list);
+ const close=document.createElement(&#x27;button&#x27;);close.textContent=&#x27;收起&#x27;;close.setAttribute(&#x27;aria-label&#x27;,&#x27;收起物件列表&#x27;);close.style.cssText=&#x27;position:absolute;right:8px;top:2px;background:transparent;border:0;padding:5px;font-size:11px;color:#827055;box-shadow:none&#x27;;panel.append(close);document.body.append(panel);
+ const hints=document.createElement(&#x27;button&#x27;);hints.textContent=&#x27;物件&#x27;;hints.setAttribute(&#x27;aria-label&#x27;,&#x27;打开物件列表&#x27;);hints.setAttribute(&#x27;aria-expanded&#x27;,&#x27;false&#x27;);hints.setAttribute(&#x27;aria-controls&#x27;,panel.id);hints.style.cssText=&#x27;position:absolute;right:5%;top:13%;z-index:16;border:1px solid #f5dfb6;background:#fff0d1b3;border-radius:16px;color:#796449;padding:7px 10px;font-size:11px;min-height:34px&#x27;;document.body.append(hints);
+ const hide=window.WakukuCloseObjectList=()=&gt;{panel.hidden=true;hints.setAttribute(&#x27;aria-expanded&#x27;,&#x27;false&#x27;);};close.onclick=hide;hints.onclick=()=&gt;{panel.hidden=!panel.hidden;hints.setAttribute(&#x27;aria-expanded&#x27;,String(!panel.hidden));};
+ document.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(e.target!==hints&amp;&amp;!panel.contains(e.target))hide();},true);document.addEventListener(&#x27;keydown&#x27;,e=&gt;{if(e.key===&#x27;Escape&#x27;)hide();});
+
+ window.WakukuHouseCanInteract=()=&gt;!paused&amp;&amp;!pet.feedPhase&amp;&amp;!pet.foodDrag&amp;&amp;!ballBusy()&amp;&amp;!window.WakukuWalk?.moving&amp;&amp;!window.WakukuDaily;
  const gestures=new Map();
  document.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(e.target!==canvas&amp;&amp;!e.target.closest?.(&#x27;[data-camera-control]&#x27;))return;if(inputPoint(e).y&gt;=610||!window.WakukuHouseCanInteract())return;gestures.set(e.pointerId,{x:e.clientX,y:e.clientY,time:performance.now(),moved:false});},true);
  window.addEventListener(&#x27;pointermove&#x27;,e=&gt;{const g=gestures.get(e.pointerId);if(g&amp;&amp;Math.hypot(e.clientX-g.x,e.clientY-g.y)&gt;7)g.moved=true;},true);
  window.addEventListener(&#x27;pointerup&#x27;,e=&gt;{const g=gestures.get(e.pointerId);gestures.delete(e.pointerId);if(!g||g.moved||performance.now()-g.time&gt;650||pet.tool===1||!window.WakukuHouseCanInteract())return;window.WakukuDoll?.interactRoom?.(inputPoint(e));},true);
  window.addEventListener(&#x27;pointercancel&#x27;,e=&gt;gestures.delete(e.pointerId));window.addEventListener(&#x27;blur&#x27;,()=&gt;gestures.clear());
+ const dailyTypes={&#x27;沙发&#x27;:&#x27;sit&#x27;,&#x27;电视&#x27;:&#x27;tv&#x27;,&#x27;绿植&#x27;:&#x27;water&#x27;,&#x27;阳台植物&#x27;:&#x27;water&#x27;,&#x27;洗手台&#x27;:&#x27;wash&#x27;,&#x27;厨房水槽&#x27;:&#x27;wash&#x27;};
+ const labels={sit:&#x27;坐沙发&#x27;,tv:&#x27;看电视&#x27;,water:&#x27;浇花&#x27;,wash:&#x27;洗手&#x27;};
+ const replies={sit:&#x27;软软的，坐一会儿真舒服。&#x27;,tv:&#x27;一起看一小会儿电视吧。&#x27;,water:&#x27;咕噜咕噜，小叶子也喝饱啦。&#x27;,wash:&#x27;搓搓手，手心手背都洗干净。&#x27;};
+ const cancel=document.createElement(&#x27;button&#x27;);cancel.textContent=&#x27;结束活动&#x27;;cancel.hidden=true;cancel.style.cssText=&#x27;position:absolute;right:5%;top:74%;z-index:20;border:0;border-radius:18px;background:#fff5dfdc;color:#756349;padding:10px 14px&#x27;;document.body.append(cancel);
+ function endDaily(){const a=window.WakukuDaily;if(a){a.stage=&#x27;exit&#x27;;a.clock=0;a.finish();}}
+ cancel.onclick=endDaily;
+ window.WakukuDailyRequest=(tag,center,begin,finish)=&gt;{
+  const type=dailyTypes[tag];if(!type)return false;
+  if(window.WakukuDaily||!window.WakukuHouseCanInteract())return true;
+  let target,heading,seat=null;
+  if(type===&#x27;sit&#x27;||type===&#x27;tv&#x27;){target=[-.4,-1.4];heading=type===&#x27;tv&#x27;?.85:0;seat=[0,-1.92];}
+  else if(tag===&#x27;洗手台&#x27;){target=[2.85,1.4];heading=Math.PI;}
+  else if(tag===&#x27;厨房水槽&#x27;){target=[-2.27,-1.85];heading=Math.atan2(center.x-target[0],center.z-target[1]);}
+  else{target=tag===&#x27;绿植&#x27;?[-.62,-.5]:[center.x,1.83];heading=Math.atan2(center.x-target[0],center.z-target[1]);}
+  if(!window.WakukuNavigateTo?.(...target)){toast(&#x27;这边暂时走不过去，先换个位置吧。&#x27;);return true;}
+  window.WakukuWalk.room=tag;window.WakukuDaily={type,tag,stage:&#x27;approach&#x27;,clock:0,blend:0,heading,seat,center,target,begin,finish};cancel.hidden=false;toast(&#x27;苔苔走过去&#x27;+labels[type]+&#x27;。&#x27;);return true;
+ };
+ document.querySelector(&#x27;[aria-label=&quot;给小植物浇水&quot;]&#x27;)?.addEventListener(&#x27;click&#x27;,e=&gt;{e.stopImmediatePropagation();window.WakukuDailyRequest(&#x27;绿植&#x27;,{x:-.62,y:.3,z:-.95},()=&gt;{},()=&gt;{});},true);
+ const beforeDailyUpdate=updatePolish;updatePolish=function(){beforeDailyUpdate();const a=window.WakukuDaily;if(!a)return;const w=window.WakukuWalk,h=Math.min(dt,.04);a.clock+=h;
+  if((w.manual||(w.moving&amp;&amp;a.stage===&#x27;perform&#x27;)||pet.foodDrag||pet.feedPhase||ballBusy()||paused)&amp;&amp;a.stage!==&#x27;exit&#x27;)endDaily();
+  if(a.stage===&#x27;approach&#x27;){
+   if(!w.moving&amp;&amp;!w.path.length&amp;&amp;Math.hypot(w.target-fetcher.x,w.targetZ-w.z)&lt;1){if(Math.hypot(fetcher.x/341.333-a.target[0],w.z/341.333-a.target[1])&gt;.12){endDaily();return;}a.stage=&#x27;enter&#x27;;a.clock=0;a.origin=[fetcher.x/341.333,w.z/341.333];}
+  }else{
+   const entering=a.stage!==&#x27;exit&#x27;;a.blend=clamp(a.blend+(entering?1:-1)*h/1.1,0,1);
+   if(!w.manual){const delta=a.heading-w.heading;w.heading+=Math.atan2(Math.sin(delta),Math.cos(delta))*(1-Math.exp(-h*5));}
+   if(a.stage===&#x27;enter&#x27;&amp;&amp;a.blend&gt;=1){a.stage=&#x27;perform&#x27;;a.clock=0;a.begin();toast(replies[a.type]);window.WakukuCareReply?.(replies[a.type]);}
+   if(a.stage===&#x27;perform&#x27;&amp;&amp;a.clock&gt;(a.type===&#x27;tv&#x27;?12:a.type===&#x27;sit&#x27;?9:6))endDaily();
+   if(a.stage===&#x27;exit&#x27;&amp;&amp;a.blend&lt;=0){a.finish();window.WakukuDaily=null;cancel.hidden=true;toast(&#x27;好啦，再去做点什么？&#x27;);}
+  }
+  document.body.dataset.dailyAction=a.type;document.body.dataset.dailyStage=window.WakukuDaily?.stage||&#x27;idle&#x27;;
+ };
+ window.addEventListener(&#x27;blur&#x27;,endDaily);document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidden)endDaily();});
  let lastSound=0;
  window.addEventListener(&#x27;wakuku:house-action&#x27;,e=&gt;{const d=e.detail;document.body.dataset.lastObject=d.tag;document.body.dataset.objectActive=String(d.active);
   if(d.legacy){document.querySelector(&#x27;[aria-label=&quot;&#x27;+d.legacy+&#x27;&quot;]&#x27;)?.click();return;}
@@ -1596,7 +1659,7 @@ window.createWakukuRoom=function(THREE,scene){
   if(d.tag===&#x27;阳台植物&#x27;)window.WakukuCareReply?.(&#x27;咕噜咕噜，小叶子也喝饱啦。&#x27;);
   if(!muted&amp;&amp;performance.now()-lastSound&gt;250){Feedback.fx(&#x27;select&#x27;);lastSound=performance.now();}buzz(6);
  });
- const oldReset=reset;reset=function(...args){oldReset(...args);window.WakukuDoll?.resetGroundBall?.();};
+ const oldReset=reset;reset=function(...args){endDaily();window.WakukuDaily=null;cancel.hidden=true;oldReset(...args);window.WakukuDoll?.resetGroundBall?.();};
 })();
 &lt;/script&gt;
 &lt;script src=&quot;model-part-00.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-01.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-02.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-03.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-04.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-05.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-06.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-07.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-08.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-09.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-10.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-11.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-12.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-13.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-14.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;wakuku_doll_glb.js&quot;&gt;&lt;/script&gt;
@@ -1696,7 +1759,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
     const wrist=bone(side+&#x27;Hand&#x27;).getWorldPosition(new THREE.Vector3());
     const upper=shoulder.distanceTo(elbow),lower=elbow.distanceTo(wrist);
     const dir=target.clone().sub(shoulder);const distance=THREE.MathUtils.clamp(dir.length(),Math.abs(upper-lower)+.008,upper+lower-.012);dir.normalize();
-    const pole=new THREE.Vector3(side===&#x27;Left&#x27;?.7:-.7,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0),turn);
+    const pole=new THREE.Vector3(side===&#x27;Left&#x27;?.7:-.7,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0),pivot.rotation.y);
     pole.addScaledVector(dir,-pole.dot(dir)).normalize();
     const along=(upper*upper-lower*lower+distance*distance)/(2*distance);
     const bend=Math.sqrt(Math.max(0,upper*upper-along*along));
@@ -1745,6 +1808,15 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
   renderer.domElement.addEventListener(&#x27;pointermove&#x27;,e=&gt;{if(dragX!==null){turn+=(e.clientX-dragX)*.01;dragX=e.clientX;}});
   renderer.domElement.addEventListener(&#x27;pointerup&#x27;,e=&gt;{if(Math.abs(e.clientX-downX)&lt;6){play(&#x27;tap&#x27;);window.dispatchEvent(new CustomEvent(&#x27;wakuku:tap&#x27;));}dragX=null;});
   renderer.domElement.addEventListener(&#x27;pointercancel&#x27;,()=&gt;{dragX=null;});
+  // Daily-action props share the existing renderer, lights and model materials.
+  const dailyProps=new THREE.Group();scene.add(dailyProps);
+  const can=new THREE.Group();dailyProps.add(can);
+  const canMat=new THREE.MeshStandardMaterial({color:0x9cb5a2,roughness:.8});
+  const vessel=new THREE.Mesh(new THREE.CylinderGeometry(.055,.047,.10,16),canMat);can.add(vessel);
+  const spout=new THREE.Mesh(new THREE.CylinderGeometry(.012,.018,.13,10),canMat);spout.rotation.x=.9;spout.position.set(0,.025,.09);can.add(spout);
+  const handle=new THREE.Mesh(new THREE.TorusGeometry(.047,.009,8,20),canMat);handle.position.z=-.045;handle.rotation.y=Math.PI/2;can.add(handle);
+  const stepStool=new THREE.Mesh(new THREE.BoxGeometry(.34,.36,.30),new THREE.MeshStandardMaterial({color:0xd9bd93,roughness:.9}));dailyProps.add(stepStool);stepStool.castShadow=true;
+  const dailyDrops=[];for(let i=0;i&lt;14;i++){const d=new THREE.Mesh(new THREE.SphereGeometry(.007,6,4),new THREE.MeshBasicMaterial({color:0xb7e3e6,transparent:true,opacity:.8}));scene.add(d);dailyDrops.push(d);}
   const resize=()=&gt;{const {clientWidth:w,clientHeight:h}=container;renderer.setSize(w,h,false);camera.left=-.9225*w/h;camera.right=.9225*w/h;camera.updateProjectionMatrix();};
   new ResizeObserver(resize).observe(container);resize();
   const ease=t=&gt;{t=THREE.MathUtils.clamp(t,0,1);return t*t*(3-2*t);};
@@ -1753,7 +1825,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
     if(dragX===null){turnVel+=-turn*.02;turnVel*=.85;turn+=turnVel;}
     roomModel.update(window.WakukuRoomMood||0,window.WakukuRoomLamp!==false,now/1000,window.WakukuRoomMusic);
     const explore=window.WakukuWalk;
-    if(explore){const cx=explore.camera/341.333,cz=explore.cameraZ/341.333;const orbit=window.WakukuCamera||{yaw:0,pitch:.29,zoom:1};camera.position.set(cx+Math.sin(orbit.yaw)*Math.cos(orbit.pitch)*3.03,.815+Math.sin(orbit.pitch)*3.03,cz+Math.cos(orbit.yaw)*Math.cos(orbit.pitch)*3.03);camera.lookAt(cx,.815,cz);if(window.WakukuHouseOverview){camera.position.set(0,6,6);camera.lookAt(0,0,0);}const half=window.WakukuHouseOverview?5.2:.9225*orbit.zoom;camera.top=half;camera.bottom=-half;camera.left=-half*container.clientWidth/container.clientHeight;camera.right=-camera.left;camera.updateProjectionMatrix();camera.updateMatrixWorld();}
+    if(explore){const act=window.WakukuDaily,ab=act?.seat&amp;&amp;act.origin?ease(act.blend):0;const cx=explore.camera/341.333+(ab?(act.seat[0]-act.origin[0])*ab:0),cz=explore.cameraZ/341.333+(ab?(act.seat[1]-act.origin[1])*ab:0);const orbit=window.WakukuCamera||{yaw:0,pitch:.29,zoom:1};camera.position.set(cx+Math.sin(orbit.yaw)*Math.cos(orbit.pitch)*3.03,.815+Math.sin(orbit.pitch)*3.03,cz+Math.cos(orbit.yaw)*Math.cos(orbit.pitch)*3.03);camera.lookAt(cx,.815,cz);if(window.WakukuHouseOverview){camera.position.set(0,6,6);camera.lookAt(0,0,0);}const half=window.WakukuHouseOverview?5.2:.9225*orbit.zoom;camera.top=half;camera.bottom=-half;camera.left=-half*container.clientWidth/container.clientHeight;camera.right=-camera.left;camera.updateProjectionMatrix();camera.updateMatrixWorld();}
     pivot.position.set((state.x||0)/341.333,0,(explore?.z||0)/341.333);shadow.position.x=pivot.position.x;shadow.position.z=pivot.position.z;pivot.rotation.set(0,turn,0);pivot.scale.set(1,1,1);
     if(ready){
       resetBones();let crouch=0;let reaching=false;
@@ -1805,12 +1877,43 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
         const hand=state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;;
         solveArm(hand,target);
       }
+      const daily=window.WakukuDaily,b=daily?ease(daily.blend):0;
+      can.visible=false;stepStool.visible=false;for(const drop of dailyDrops)drop.visible=false;
+      if(daily&amp;&amp;b&gt;0){
+        const seated=daily.type===&#x27;sit&#x27;||daily.type===&#x27;tv&#x27;;
+        if(seated){
+          pivot.updateMatrixWorld(true);const hipY=bone(&#x27;Hips&#x27;).getWorldPosition(new THREE.Vector3()).y;
+          pivot.position.y+=(.40-hipY)*b;
+          pivot.position.x+=(daily.seat[0]-daily.origin[0])*b;pivot.position.z+=(daily.seat[1]-daily.origin[1])*b;
+          rotate(&#x27;LeftUpLeg&#x27;,-1.35*b);rotate(&#x27;RightUpLeg&#x27;,-1.35*b);rotate(&#x27;LeftLeg&#x27;,1.25*b);rotate(&#x27;RightLeg&#x27;,1.25*b);
+          rotate(&#x27;Spine&#x27;,-.07*b);rotate(&#x27;Head&#x27;,.02*b,Math.sin(now*.0008)*.035*b);
+        }else if(daily.type===&#x27;wash&#x27;){
+          pivot.position.y+=.36*b;stepStool.visible=true;stepStool.position.set(pivot.position.x,.18*b,pivot.position.z);stepStool.scale.y=b;
+          rotate(&#x27;Spine&#x27;,.10*b);rotate(&#x27;Head&#x27;,.14*b);
+        }else{rotate(&#x27;Spine&#x27;,.06*b);rotate(&#x27;Head&#x27;,.10*b);}
+        pivot.updateMatrixWorld(true);
+        const localTarget=(x,y,z)=&gt;new THREE.Vector3(x,y,z).applyAxisAngle(new THREE.Vector3(0,1,0),pivot.rotation.y).add(pivot.position);
+        const pulse=Math.sin(now*.009)*.016;
+        for(const side of [&#x27;Left&#x27;,&#x27;Right&#x27;]){
+          const sign=side===&#x27;Left&#x27;?1:-1;
+          const target=seated?localTarget(sign*.10,.24,.14):daily.type===&#x27;wash&#x27;?localTarget(sign*(.025+pulse),.34,.20):localTarget(sign*.05,.32,.21);
+          const start=bone(side+&#x27;Hand&#x27;).getWorldPosition(new THREE.Vector3());solveArm(side,start.lerp(target,b));
+        }
+        if(daily.type===&#x27;water&#x27;){
+          can.visible=true;can.position.copy(localTarget(0,.28,.25));can.rotation.set(.35*b+Math.sin(now*.0015)*.04,0,0);can.rotation.y=pivot.rotation.y;
+        }
+        if(daily.stage===&#x27;perform&#x27;&amp;&amp;(daily.type===&#x27;water&#x27;||daily.type===&#x27;wash&#x27;)){
+          const origin=daily.type===&#x27;water&#x27;?localTarget(0,.31,.36):localTarget(0,.38,.23);
+          for(let i=0;i&lt;dailyDrops.length;i++){const d=dailyDrops[i],f=(now*.0018+i/14)%1;d.visible=true;d.position.copy(origin).add(new THREE.Vector3(Math.sin(i)*.018,-f*.20,Math.cos(i)*.015));d.scale.set(1,1.6,1);}
+        }
+      }
       pivot.updateMatrixWorld(true);
       const smileTarget=state.brushing?.8:current===&#x27;happy&#x27;?.95*envelope:current===&#x27;tap&#x27;?.55*envelope:current===&#x27;eat&#x27;?eating.smile:0;
       const squintTarget=state.brushing?.65:current===&#x27;sleep&#x27;?.75*ease(f):current===&#x27;happy&#x27;?.8*envelope:current===&#x27;tap&#x27;?.35*envelope:0;
       const chewTarget=current===&#x27;eat&#x27;?eating.chew:0;
       for(let i=0;i&lt;3;i++){expression[i]+=([smileTarget,squintTarget,chewTarget][i]-expression[i])*(1-Math.exp(-dt*12));for(const mesh of expressiveMeshes)mesh.morphTargetInfluences[i]=expression[i];}
       container.dataset.expression=expression.map(n=&gt;n.toFixed(2)).join(&#x27;,&#x27;);
+      container.dataset.daily=window.WakukuDaily?.type||&#x27;&#x27;;
       container.dataset.action=(state.roamWeight||0)&gt;.1?&#x27;walk&#x27;:[&#x27;pickup&#x27;,&#x27;carry&#x27;,&#x27;offer&#x27;,&#x27;chase&#x27;].includes(phase)?phase:current||(state.brushing?&#x27;brush&#x27;:&#x27;idle&#x27;);
       if(current&amp;&amp;f&gt;=1&amp;&amp;current!==&#x27;sleep&#x27;)current=null;
     }
