@@ -1350,7 +1350,7 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
    let step=Math.min(d,walk.speed*h);if(d&gt;.5){fetcher.x+=dx/d*step;walk.z+=dz/d*step;fetcher.gait+=step/24;walk.heading+=((Math.atan2(dx,dz))-walk.heading)*(1-Math.exp(-h*9));}else{fetcher.x=walk.target;walk.z=walk.targetZ;walk.speed=0;step=0;}
    walk.moving=step&gt;.02;doll.x=fetcher.x;
   }
-  walk.weight+=(Number(walk.moving)-walk.weight)*(1-Math.exp(-h*10));if(!walk.moving){const a=(window.WakukuCamera?.yaw||0)-walk.heading;walk.heading+=Math.atan2(Math.sin(a),Math.cos(a))*(1-Math.exp(-h*6));}
+  walk.weight+=(Number(walk.moving)-walk.weight)*(1-Math.exp(-h*10));
   walk.marker=Math.max(0,walk.marker-h);
   if(!ballBusy()&amp;&amp;toy.phase!==&#x27;offer&#x27;){walk.camera+=(fetcher.x-walk.camera)*(1-Math.exp(-h*5));walk.cameraZ+=(walk.z-walk.cameraZ)*(1-Math.exp(-h*5));}
   floor.disabled=!!(paused||pet.feedPhase||ballBusy()||toy.phase===&#x27;offer&#x27;);for(const b of nav.children)b.disabled=floor.disabled;
@@ -1380,90 +1380,163 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
  window.addEventListener(&#x27;blur&#x27;,()=&gt;{points.clear();pinch=0;});document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{points.clear();pinch=0;});
  const old=updatePolish;updatePolish=function(){old();pad.style.pointerEvents=enabled()?&#x27;auto&#x27;:&#x27;none&#x27;;if(!enabled())points.clear();if(!paused&amp;&amp;!document.hidden){const k=1-Math.exp(-Math.min(dt,.04)*12);view.yaw+=(view.targetYaw-view.yaw)*k;view.pitch+=(view.targetPitch-view.pitch)*k;view.zoom+=(view.targetZoom-view.zoom)*k;}pad.dataset.yaw=view.yaw.toFixed(3);pad.dataset.pitch=view.pitch.toFixed(3);pad.dataset.zoom=view.zoom.toFixed(3);};
 })();
+&lt;/script&gt;&lt;script&gt;/* Shared object registry: direct mesh picking, optional hints and reversible feedback. */
+window.createHouseInteractions=function(THREE,group){
+ const entries=new Map(),ray=new THREE.Raycaster();let clock=0,last=0;
+ const notes={&#x27;沙发&#x27;:&#x27;软软的靠垫，轻轻弹了一下。&#x27;,&#x27;茶几&#x27;:&#x27;叩叩，木头的声音真好听。&#x27;,&#x27;床与枕头&#x27;:&#x27;枕头蓬松啦，休息一会儿。&#x27;,&#x27;书柜&#x27;:&#x27;抽出一本书，再轻轻放回去。&#x27;,&#x27;书与花瓶&#x27;:&#x27;小摆件晃了晃，书也探出头啦。&#x27;,&#x27;积木&#x27;:&#x27;咔哒，积木跳起一小步。&#x27;,&#x27;玩具篮&#x27;:&#x27;打开看看，里面藏着小玩具。&#x27;,&#x27;厨房柜门&#x27;:&#x27;柜门打开啦，再点一下关上。&#x27;,&#x27;抽屉柜&#x27;:&#x27;拉开小抽屉，再点一下收好。&#x27;,&#x27;冰箱&#x27;:&#x27;冰箱门打开啦，再点一下关上。&#x27;,&#x27;厨房水槽&#x27;:&#x27;哗啦啦，水龙头打开了。&#x27;,&#x27;洗手台&#x27;:&#x27;搓搓小手，水流哗啦啦。&#x27;,&#x27;淋浴&#x27;:&#x27;淅沥沥，小水滴落下来啦。&#x27;,&#x27;灶台&#x27;:&#x27;小炉子亮起来啦，再点一下关闭。&#x27;,&#x27;马桶&#x27;:&#x27;冲水啦，咕噜咕噜。&#x27;,&#x27;阳台植物&#x27;:&#x27;咕噜咕噜，小叶子也喝饱啦。&#x27;,&#x27;阳台椅子&#x27;:&#x27;小椅子轻轻摇了摇。&#x27;,&#x27;阳台栏杆&#x27;:&#x27;叩叩，阳台有风吹过来。&#x27;,&#x27;地毯&#x27;:&#x27;踩踩软软的地毯。&#x27;,&#x27;墙面&#x27;:&#x27;咚咚，是小屋在回应。&#x27;,&#x27;隔板&#x27;:&#x27;这里是房间的边界。&#x27;,&#x27;地板&#x27;:&#x27;嗒嗒，脚下的小地板。&#x27;,&#x27;灯串&#x27;:&#x27;星星灯换了一个颜色。&#x27;};
+ const legacy={&#x27;台灯&#x27;:&#x27;开关小屋暖灯&#x27;,&#x27;绿植&#x27;:&#x27;给小植物浇水&#x27;,&#x27;风铃&#x27;:&#x27;轻拨窗边风铃&#x27;,&#x27;圆窗&#x27;:&#x27;切换午后与星夜&#x27;,&#x27;音乐盒&#x27;:&#x27;转动音乐盒&#x27;,&#x27;泡泡瓶&#x27;:&#x27;吹一串泡泡&#x27;};
+ const immobile=new Set([&#x27;地板&#x27;,&#x27;墙面&#x27;,&#x27;隔板&#x27;,&#x27;阳台栏杆&#x27;]);
+ for(const m of group.children){if(!m.isMesh||!m.userData.item)continue;const tag=m.userData.item,key=tag+&#x27;:&#x27;+(m.position.x&lt; -1?&#x27;L&#x27;:m.position.x&gt;1?&#x27;R&#x27;:&#x27;C&#x27;)+&#x27;:&#x27;+(m.position.z&lt;-.6?&#x27;B&#x27;:m.position.z&gt;.6?&#x27;F&#x27;:&#x27;M&#x27;);let e=entries.get(key);if(!e){e={key,tag,parts:[],active:false,age:99,open:0};entries.set(key,e);}e.parts.push({m,p:m.position.clone(),r:m.rotation.clone(),s:m.scale.clone()});m.userData.interaction=e;}
+ const waterMat=new THREE.MeshBasicMaterial({color:&#x27;#a6dfe6&#x27;,transparent:true,opacity:.75});
+ const sparkMat=new THREE.MeshBasicMaterial({color:&#x27;#fff0ad&#x27;,transparent:true,opacity:.8});
+ for(const e of entries.values()){
+  const bounds=new THREE.Box3();for(const p of e.parts)bounds.union(new THREE.Box3().setFromObject(p.m));e.center=bounds.getCenter(new THREE.Vector3());
+  e.effects=new THREE.Group();group.add(e.effects);e.effects.visible=false;e.drops=[];
+  for(let i=0;i&lt;9;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.009,6,4),/水槽|洗手台|淋浴|植物|绿植|马桶/.test(e.tag)?waterMat:sparkMat);e.effects.add(m);e.drops.push(m);}
+  if(!immobile.has(e.tag)){
+   const b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.setAttribute(&#x27;aria-label&#x27;,&#x27;互动：&#x27;+e.tag);b.textContent=&#x27;✦&#x27;;b.title=e.tag;b.style.cssText=&#x27;position:absolute;z-index:15;width:32px;height:32px;border:1px solid #fff2bd;border-radius:50%;background:#f7db8dcc;color:#76603e;padding:0;box-shadow:0 0 9px #ffe9b5;transform:translate(-50%,-50%);touch-action:manipulation&#x27;;b.hidden=true;b.onclick=()=&gt;activate(e);document.body.append(b);e.button=b;
+  }
+ }
+ const offText={&#x27;厨房柜门&#x27;:&#x27;柜门关好啦。&#x27;,&#x27;抽屉柜&#x27;:&#x27;抽屉收好啦。&#x27;,&#x27;冰箱&#x27;:&#x27;冰箱门关好啦。&#x27;,&#x27;厨房水槽&#x27;:&#x27;水龙头关上啦。&#x27;,&#x27;洗手台&#x27;:&#x27;水龙头关好啦。&#x27;,&#x27;淋浴&#x27;:&#x27;小水滴停下来啦。&#x27;,&#x27;灶台&#x27;:&#x27;炉子关好啦。&#x27;,&#x27;床与枕头&#x27;:&#x27;休息好了，再一起玩吧。&#x27;,&#x27;书柜&#x27;:&#x27;把书轻轻放回去。&#x27;,&#x27;灯串&#x27;:&#x27;星星灯恢复啦。&#x27;};
+ function activate(e){if(window.WakukuHouseCanInteract&amp;&amp;!window.WakukuHouseCanInteract())return false;e.active=!e.active;e.age=0;
+  if(/灶台|灯串/.test(e.tag))for(const p of e.parts){if(!p.ownMaterial){p.m.material=p.m.material.clone();p.ownMaterial=true;}p.m.material.emissive?.set(e.active?&#x27;#e9a14d&#x27;:&#x27;#000000&#x27;);p.m.material.emissiveIntensity=e.active?.65:0;}
+  window.dispatchEvent(new CustomEvent(&#x27;wakuku:house-action&#x27;,{detail:{tag:e.tag,key:e.key,active:e.active,text:(!e.active&amp;&amp;offText[e.tag])||notes[e.tag]||&#x27;轻轻碰一下，它回应啦。&#x27;,legacy:legacy[e.tag]}}));return true;
+ }
+ return {pick(camera,point,actor){group.updateMatrixWorld(true);ray.setFromCamera(point,camera);const hits=ray.intersectObjects(group.children,false).filter(h=&gt;h.object.visible&amp;&amp;h.object.material.opacity&gt;.12&amp;&amp;h.object.userData.interaction);if(!hits.length)return false;const doll=ray.intersectObject(actor,true)[0];if(doll&amp;&amp;doll.distance&lt;hits[0].distance)return false;return activate(hits[0].object.userData.interaction);},project(camera){for(const e of entries.values()){if(!e.button)continue;const v=e.center.clone().project(camera);e.button.hidden=!window.WakukuShowObjects||window.WakukuHouseOverview||v.x&lt;-.95||v.x&gt;.95||v.y&lt;-.85||v.y&gt;.95||v.z&lt; -1||v.z&gt;1;e.button.style.left=(v.x+1)*50+&#x27;%&#x27;;e.button.style.top=(1-v.y)*41+&#x27;%&#x27;;}},update(time){const dt=Math.min(.05,Math.max(0,time-last));last=time;clock=time;
+  for(const e of entries.values()){e.age+=dt;e.open+=((e.active?1:0)-e.open)*(1-Math.exp(-dt*9));const bounce=e.age&lt;1.4?Math.sin(e.age*11)*Math.exp(-e.age*3):0;
+   for(const p of e.parts){if(immobile.has(e.tag)||[&#x27;台灯&#x27;,&#x27;圆窗&#x27;,&#x27;音乐盒&#x27;,&#x27;风铃&#x27;,&#x27;灯串&#x27;].includes(e.tag))continue;const m=p.m;
+    m.position.copy(p.p);m.rotation.copy(p.r);m.scale.copy(p.s);
+    if(/柜门|抽屉柜|冰箱/.test(e.tag)){const g=m.geometry.parameters;if(m.geometry.type===&#x27;BoxGeometry&#x27;&amp;&amp;g.depth&lt;.06&amp;&amp;g.height&gt;.1)m.position.z+=e.open*.16;}
+    else if(e.tag===&#x27;床与枕头&#x27;){if(m.geometry.type===&#x27;SphereGeometry&#x27;)m.scale.y=p.s.y*(1+bounce*.16);}
+    else if(e.tag===&#x27;马桶&#x27;){if(m.geometry.type===&#x27;CylinderGeometry&#x27;){m.rotation.x=-e.open*.9;m.position.y+=e.open*.06;}}
+    else if(e.tag===&#x27;书柜&#x27;){if(m.geometry.type===&#x27;BoxGeometry&#x27;&amp;&amp;m.geometry.parameters.width&lt;.08)m.position.z+=e.open*.08;}
+    else if(![&#x27;厨房水槽&#x27;,&#x27;洗手台&#x27;,&#x27;淋浴&#x27;,&#x27;灶台&#x27;].includes(e.tag)){m.position.y+=bounce*.018;m.rotation.z+=bounce*.025;}
+   }
+   const watering=/水槽|洗手台|淋浴|植物|绿植|马桶/.test(e.tag),running=watering?e.active&amp;&amp;e.age&lt;4:e.age&lt;1.2;e.effects.visible=running;
+   if(running){e.effects.position.copy(e.center);for(let i=0;i&lt;e.drops.length;i++){const d=e.drops[i],f=(clock*1.7+i/9)%1;d.position.set(Math.sin(i*2.4)*.07,watering?.15-f*.24:.08+f*.17,Math.cos(i*2.4)*.07);d.scale.set(1,watering?2:1,1);}}
+   if(watering&amp;&amp;e.age&gt;4)e.active=false;
+  }
+ }};
+};
 &lt;/script&gt;&lt;script&gt;/* Original procedural low-poly furniture; no downloaded textures or external assets. */
 window.createWakukuRoom=function(THREE,scene){
  const group=new THREE.Group();group.name=&#x27;WAKUKU warm miniature room&#x27;;scene.add(group);
+ let item=&#x27;地板&#x27;;
  const mat=(color,extra={})=&gt;new THREE.MeshStandardMaterial({color,roughness:.9,envMapIntensity:.15,...extra});
  const cream=mat(&#x27;#eadbc0&#x27;),wood=mat(&#x27;#c49b70&#x27;),lightWood=mat(&#x27;#ddbf94&#x27;),sage=mat(&#x27;#aeb99a&#x27;),green=mat(&#x27;#799376&#x27;),terra=mat(&#x27;#bb856b&#x27;);
- function mesh(geometry,material,x,y,z){const m=new THREE.Mesh(geometry,material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;group.add(m);return m;}
+ function mesh(geometry,material,x,y,z){const m=new THREE.Mesh(geometry,material);m.position.set(x,y,z);m.userData.item=item;m.castShadow=true;m.receiveShadow=true;group.add(m);return m;}
  function box(x,y,z,w,h,d,m){return mesh(new THREE.BoxGeometry(w,h,d),m,x,y,z);}
  function orb(x,y,z,a,b,c,m){const o=mesh(new THREE.SphereGeometry(1,16,12),m,x,y,z);o.scale.set(a,b,c);return o;}
  function cylinder(x,y,z,rt,rb,h,m,n=32){return mesh(new THREE.CylinderGeometry(rt,rb,h,n),m,x,y,z);}
+ item=&#x27;地板&#x27;;
  // Floorboards and enclosing walls are solid meshes with thickness.
  box(0,-.026,0,6.8,.05,6.8,lightWood);
  for(let i=0;i&lt;35;i++)box(-3.4+i*.2,.001,0,.002,.001,6.8,wood);
+ item=&#x27;墙面&#x27;;
  box(0,.93,-2.7,6.8,1.9,.055,cream);box(-3.35,.93,0,.055,1.9,5.4,cream);box(3.35,.93,0,.055,1.9,5.4,cream);
  box(0,.055,-2.66,6.7,.1,.035,lightWood);
+ item=&#x27;地毯&#x27;;
  const rug=cylinder(0,.009,.12,.52,.52,.014,sage,64);rug.scale.z=.78;
  const border=new THREE.Mesh(new THREE.TorusGeometry(.51,.008,6,64),lightWood);border.rotation.x=Math.PI/2;border.scale.y=.78;border.position.set(0,.018,.12);group.add(border);
+ item=&#x27;圆窗&#x27;;
  // Recessed round window, crossbars and distant stylized foliage.
  const sky=mat(&#x27;#b9d8d0&#x27;,{emissive:&#x27;#a9cbbf&#x27;,emissiveIntensity:.25});
  const pane=mesh(new THREE.CircleGeometry(.23,48),sky,-.43,1.08,-.677);
  const frame=mesh(new THREE.TorusGeometry(.235,.025,10,48),lightWood,-.43,1.08,-.65);
  box(-.43,1.08,-.63,.018,.43,.02,cream);box(-.43,1.08,-.63,.43,.018,.02,cream);
+ item=&#x27;抽屉柜&#x27;;
  // Right cabinet with drawers and small ceramic objects.
  box(.48,.25,-.40,.33,.48,.29,wood);box(.48,.50,-.40,.37,.035,.33,lightWood);
  for(let j=0;j&lt;2;j++){box(.48,.15+j*.21,-.24,.29,.18,.025,lightWood);orb(.48,.15+j*.21,-.216,.012,.012,.012,wood);}
+ item=&#x27;台灯&#x27;;
  // Lamp with a modeled shade, stem and warm point light.
  cylinder(.44,.525,-.40,.075,.075,.016,wood);cylinder(.44,.64,-.40,.009,.009,.22,wood,12);
  const shade=mat(&#x27;#f8e6bb&#x27;,{emissive:&#x27;#ffcf78&#x27;,emissiveIntensity:.2});cylinder(.44,.79,-.40,.067,.112,.15,shade);
  const glow=new THREE.PointLight(0xffd59b,.34,1.8,2);glow.position.set(.44,.72,-.35);group.add(glow);
+ item=&#x27;绿植&#x27;;
  // Left pot and separate leaf volumes.
  cylinder(-.48,.08,-.25,.065,.047,.15,terra);cylinder(-.48,.157,-.25,.064,.064,.01,wood);
  for(let i=0;i&lt;5;i++){const a=i*2.4;const leaf=orb(-.48+Math.sin(a)*.045,.23+i*.025,-.25+Math.cos(a)*.025,.028,.068,.018,green);leaf.rotation.z=Math.sin(a)*.65;}
+ item=&#x27;书与花瓶&#x27;;
  // Wall shelf, books and ceramic vase.
  box(.43,1.24,-.57,.4,.035,.22,wood);
  for(let i=0;i&lt;3;i++)box(.32+i*.045,1.33,-.60,.034,.15+i*.015,.06,[sage,terra,lightWood][i]);
  orb(.54,1.32,-.59,.045,.068,.045,cream);cylinder(.54,1.38,-.59,.025,.025,.04,cream);
+ item=&#x27;风铃&#x27;;
  // Wind chime and a string of warm bulbs.
  const bells=[];for(let i=0;i&lt;3;i++){cylinder(-.46+i*.025,1.02,-.54,.003,.003,.18,wood,6);bells.push(cylinder(-.46+i*.025,.91-(i%2)*.03,-.54,.009,.009,.08,lightWood,8));}
  box(-.435,1.10,-.54,.12,.012,.025,wood);
+ item=&#x27;灯串&#x27;;
  for(let i=0;i&lt;9;i++){const x=-.21+i*.09,y=1.16-.055*Math.sin(i/8*Math.PI);orb(x,y,-.56,.012,.018,.012,mat(&#x27;#ffe7b0&#x27;,{emissive:&#x27;#ffd18b&#x27;,emissiveIntensity:.5}));if(i)box(x-.045,y+.023,-.56,.095,.003,.004,wood);}
+ item=&#x27;音乐盒&#x27;;
  // Music box and bird, plus the bubble bottle on the rug edge.
  cylinder(.47,.035,.15,.095,.095,.055,lightWood);const bird=orb(.47,.105,.15,.036,.022,.022,wood);orb(.495,.126,.15,.018,.018,.018,cream);
+ item=&#x27;泡泡瓶&#x27;;
  cylinder(-.47,.065,.40,.032,.032,.12,mat(&#x27;#b3cbc0&#x27;));cylinder(-.47,.135,.40,.023,.023,.023,wood);
  // Shift the original care corner against the back wall.
  for(const o of group.children){if(o.position.z&lt;-.2&amp;&amp;o.position.z&gt;-.8)o.position.z-=1.85;}
  glow.position.z-=1.85;
+ item=&#x27;沙发&#x27;;
  // Lounge at the left: sofa, cushions, low table and a second rug.
  const upholstery=mat(&#x27;#b2bba1&#x27;),pink=mat(&#x27;#cdac99&#x27;);
  box(-1.8,.22,-1.9,1.15,.26,.48,upholstery);box(-1.8,.52,-2.12,1.15,.45,.13,upholstery);
  for(const x of [-2.37,-1.23])box(x,.39,-1.9,.13,.35,.54,upholstery);
  for(const x of [-2.05,-1.6]){const cushion=orb(x,.42,-1.91,.19,.16,.08,pink);cushion.rotation.x=-.15;}
+ item=&#x27;茶几&#x27;;
  cylinder(-1.8,.2,-1.15,.30,.30,.05,lightWood);for(const x of [-2,-1.6])cylinder(x,.1,-1.15,.025,.025,.2,wood,10);
+ item=&#x27;地毯&#x27;;
  const loungeRug=cylinder(-1.8,.008,-.9,.68,.68,.012,mat(&#x27;#d1b6a0&#x27;),48);loungeRug.scale.z=.8;
+ item=&#x27;床与枕头&#x27;;
  // Sleep nook on the right with quilt, pillow and bookcase.
  box(1.85,.13,-1.7,.9,.22,1.25,wood);box(1.85,.28,-1.7,.86,.13,1.21,cream);box(1.85,.36,-1.5,.88,.08,.75,sage);
  orb(1.85,.40,-2.1,.30,.09,.16,cream);box(1.85,.42,-2.34,.94,.55,.07,lightWood);
+ item=&#x27;书柜&#x27;;
  box(2.65,.55,-2.3,.45,1.08,.25,wood);for(let y=.24;y&lt;1;y+=.28){box(2.65,y,-2.14,.42,.025,.30,lightWood);for(let j=0;j&lt;5;j++)box(2.49+j*.07,y+.10,-2.2,.045,.18,.09,[sage,terra,cream][j%3]);}
+ item=&#x27;地毯&#x27;;
  // Foreground play area leaves an open path between furniture clusters.
  const playRug=cylinder(0,.009,1.45,.9,.9,.015,mat(&#x27;#a4b8b5&#x27;),64);playRug.scale.z=.8;
+ item=&#x27;积木&#x27;;
  for(let i=0;i&lt;4;i++)box(-.65+i*.13,.065,1.9,.11,.12,.11,[sage,terra,lightWood,cream][i]);
+ item=&#x27;玩具篮&#x27;;
  cylinder(.55,.11,1.9,.17,.14,.2,terra);orb(.55,.24,1.9,.13,.08,.12,cream);
+ item=&#x27;隔板&#x27;;
  // Room partitions: door openings face the unobstructed central corridor.
  const partition=mat(&#x27;#e1d3bd&#x27;),tile=mat(&#x27;#c6d8d2&#x27;),blue=mat(&#x27;#b7caca&#x27;);
  for(const side of [-1,1]){
   box(side*.97,.78,-1.68,.055,1.56,2.0,partition);box(side*.97,.78,1.68,.055,1.56,2.0,partition);
   for(const z of [-.66,.66]){box(side*1.22,.78,z,.48,1.56,.055,partition);box(side*2.80,.78,z,1.06,1.56,.055,partition);box(side*1.86,1.47,z,.80,.18,.065,lightWood);}
  }
+ item=&#x27;厨房柜门&#x27;;
  // Kitchen: counters, inset sink, faucet, stove and refrigerator.
  box(-1.86,.35,-2.42,1.65,.70,.47,wood);box(-1.86,.72,-2.42,1.7,.045,.50,cream);
  for(const x of [-2.46,-2.05,-1.64,-1.23]){box(x,.36,-2.17,.37,.62,.025,lightWood);box(x+.1,.55,-2.145,.06,.014,.015,wood);}
+ item=&#x27;厨房水槽&#x27;;
  box(-2.27,.749,-2.42,.36,.018,.31,blue);box(-2.27,.758,-2.42,.29,.016,.24,tile);cylinder(-2.27,.84,-2.58,.013,.013,.18,wood,12);box(-2.27,.93,-2.53,.027,.025,.13,wood);
+ item=&#x27;灶台&#x27;;
  box(-1.45,.751,-2.42,.41,.02,.32,mat(&#x27;#777d70&#x27;));for(const x of [-1.56,-1.34]){const ring=cylinder(x,.77,-2.42,.06,.06,.014,wood);}
+ item=&#x27;冰箱&#x27;;
  box(-2.9,.61,-2.38,.43,1.22,.49,cream);box(-2.68,.65,-2.12,.025,.3,.025,wood);
+ box(-2.9,.61,-2.12,.40,1.18,.035,cream);
  // Move sofa to the living room, keeping paths clear.
  for(const o of group.children){if(o.position.x&lt; -1.1&amp;&amp;o.position.x&gt; -2.5&amp;&amp;o.position.z&gt; -2.15&amp;&amp;o.position.z&lt;-.7){o.position.x+=1.8;o.position.z-=.1;}}
+ item=&#x27;地板&#x27;;
  // Bathroom: tiled floor, shower tray and screen, toilet and vanity.
  box(2.13,.008,1.72,2.25,.018,2.0,tile);
  for(let i=0;i&lt;8;i++){box(1.05+i*.29,.02,1.72,.008,.003,2,cream);box(2.13,.02,.78+i*.26,2.25,.003,.008,cream);}
+ item=&#x27;淋浴&#x27;;
  box(2.78,.07,2.17,.75,.12,.85,cream);const glass=mat(&#x27;#c6e0dc&#x27;,{transparent:true,opacity:.28,depthWrite:false});box(2.36,.78,2.17,.025,1.38,.85,glass);cylinder(3.03,1.05,2.43,.013,.013,.75,wood,12);orb(3.03,1.43,2.37,.065,.015,.07,wood);
+ item=&#x27;马桶&#x27;;
  orb(1.45,.23,2.22,.18,.23,.24,cream);const seat=cylinder(1.45,.43,2.18,.18,.17,.04,cream);seat.scale.z=1.3;box(1.45,.55,2.45,.34,.43,.14,cream);
+ item=&#x27;洗手台&#x27;;
  box(2.85,.35,1.0,.66,.65,.43,wood);orb(2.85,.70,1,.29,.065,.18,cream);cylinder(2.85,.80,1.16,.012,.012,.18,wood,12);
+ item=&#x27;地板&#x27;;
  // Balcony: open railing, green planters and a little chair.
  box(-2.15,.02,1.8,2.3,.04,2.0,lightWood);
+ item=&#x27;阳台栏杆&#x27;;
  for(let i=0;i&lt;12;i++)box(-3.24+i*.19,.42,2.65,.025,.8,.03,cream);box(-2.2,.84,2.65,2.4,.04,.05,cream);
+ item=&#x27;阳台植物&#x27;;
  for(const x of [-2.9,-1.25]){box(x,.16,2.3,.36,.30,.35,terra);for(let i=0;i&lt;5;i++)orb(x+Math.sin(i*2)*.10,.40+i*.045,2.3+Math.cos(i)*.06,.08,.15,.07,green);}
+ item=&#x27;阳台椅子&#x27;;
  box(-2.55,.31,1.3,.43,.06,.43,wood);box(-2.55,.58,1.50,.43,.48,.045,wood);for(const x of [-2.72,-2.38])for(const z of [1.14,1.45])box(x,.15,z,.035,.3,.035,wood);
  // Collision footprints are derived from the same meshes as the visible house.
  const obstacles=[];
@@ -1485,8 +1558,9 @@ window.createWakukuRoom=function(THREE,scene){
    cutaways.push({mesh:o,interior,lintel,opacity:material.opacity,transparent:material.transparent,depthWrite:material.depthWrite,castShadow:o.castShadow,y:o.position.y,scale:o.scale.y,height:o.geometry.parameters.height||1,box:new THREE.Box3().setFromObject(o).expandByScalar(.12)});
   }
  }
+ const interactions=window.createHouseInteractions(THREE,group);
  const controls={};
- return {alignControls(camera,player){
+ return {pick:(camera,point,actor)=&gt;interactions.pick(camera,point,actor),alignControls(camera,player){interactions.project(camera);
   const overview=!!window.WakukuHouseOverview;
   for(const c of cutaways){const o=c.mesh;o.visible=true;
    o.scale.y=c.scale;o.position.y=c.y;o.material.opacity=c.opacity;o.material.transparent=c.transparent;o.material.depthWrite=c.depthWrite;o.castShadow=c.castShadow;
@@ -1503,8 +1577,27 @@ window.createWakukuRoom=function(THREE,scene){
     if(blocked){o.material.transparent=true;o.material.opacity=.08;o.material.depthWrite=false;o.castShadow=false;}
    }
   }
- for(const [label,xyz] of Object.entries(anchors)){const b=controls[label]||=document.querySelector(`[aria-label=&quot;${label}&quot;]`);if(!b)continue;const v=new THREE.Vector3(xyz[0],xyz[1],xyz[2]&lt;( -.2)?xyz[2]-1.85:xyz[2]).project(camera);b.hidden=window.WakukuHouseOverview||v.x &lt; -1.05 || v.x &gt; 1.05 || v.y &lt; -1 || v.y &gt; 1; b.style.left=`${(v.x+1)*50}%`;b.style.top=`${(1-v.y)*41}%`;b.style.transform=&#x27;translate(-50%,-50%)&#x27;;}},update(night,lamp,time,music){glow.intensity=lamp?.34:0;shade.emissiveIntensity=lamp?.2:0;sky.color.set(night&gt;.5?&#x27;#667e9c&#x27;:&#x27;#b9d8d0&#x27;);bird.rotation.y=music?time*2:0;for(let i=0;i&lt;bells.length;i++)bells[i].rotation.z=Math.sin(time*1.5+i)*.025;}};
+ for(const [label,xyz] of Object.entries(anchors)){const b=controls[label]||=document.querySelector(`[aria-label=&quot;${label}&quot;]`);if(!b)continue;const v=new THREE.Vector3(xyz[0],xyz[1],xyz[2]&lt;( -.2)?xyz[2]-1.85:xyz[2]).project(camera);b.hidden=window.WakukuHouseOverview||v.x &lt; -1.05 || v.x &gt; 1.05 || v.y &lt; -1 || v.y &gt; 1; b.style.left=`${(v.x+1)*50}%`;b.style.top=`${(1-v.y)*41}%`;b.style.transform=&#x27;translate(-50%,-50%)&#x27;;}},update(night,lamp,time,music){interactions.update(time);glow.intensity=lamp?.34:0;shade.emissiveIntensity=lamp?.2:0;sky.color.set(night&gt;.5?&#x27;#667e9c&#x27;:&#x27;#b9d8d0&#x27;);bird.rotation.y=music?time*2:0;for(let i=0;i&lt;bells.length;i++)bells[i].rotation.z=Math.sin(time*1.5+i)*.025;}};
 };
+&lt;/script&gt;&lt;script&gt;/* A tap activates a room object; a drag still belongs to the orbit camera. */
+(()=&gt;{
+ const hints=document.createElement(&#x27;button&#x27;);hints.textContent=&#x27;找互动 ✦&#x27;;hints.setAttribute(&#x27;aria-label&#x27;,&#x27;显示物件互动提示&#x27;);hints.setAttribute(&#x27;aria-pressed&#x27;,&#x27;false&#x27;);hints.style.cssText=&#x27;position:absolute;right:5%;top:13%;z-index:16;border:1px solid #f5dfb6;background:#fff0d1d9;border-radius:16px;color:#796449;padding:7px 10px;font-size:11px;min-height:34px&#x27;;document.body.append(hints);hints.onclick=()=&gt;{window.WakukuShowObjects=!window.WakukuShowObjects;hints.setAttribute(&#x27;aria-pressed&#x27;,String(window.WakukuShowObjects));toast(window.WakukuShowObjects?&#x27;点亮点，看看小物件会做什么。&#x27;:&#x27;直接点房间里的物件，也可以互动。&#x27;);};
+ window.WakukuHouseCanInteract=()=&gt;!paused&amp;&amp;!pet.feedPhase&amp;&amp;!pet.foodDrag&amp;&amp;!ballBusy()&amp;&amp;!window.WakukuWalk?.moving;
+ const gestures=new Map();
+ document.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(e.target!==canvas&amp;&amp;!e.target.closest?.(&#x27;[data-camera-control]&#x27;))return;if(inputPoint(e).y&gt;=610||!window.WakukuHouseCanInteract())return;gestures.set(e.pointerId,{x:e.clientX,y:e.clientY,time:performance.now(),moved:false});},true);
+ window.addEventListener(&#x27;pointermove&#x27;,e=&gt;{const g=gestures.get(e.pointerId);if(g&amp;&amp;Math.hypot(e.clientX-g.x,e.clientY-g.y)&gt;7)g.moved=true;},true);
+ window.addEventListener(&#x27;pointerup&#x27;,e=&gt;{const g=gestures.get(e.pointerId);gestures.delete(e.pointerId);if(!g||g.moved||performance.now()-g.time&gt;650||pet.tool===1||!window.WakukuHouseCanInteract())return;window.WakukuDoll?.interactRoom?.(inputPoint(e));},true);
+ window.addEventListener(&#x27;pointercancel&#x27;,e=&gt;gestures.delete(e.pointerId));window.addEventListener(&#x27;blur&#x27;,()=&gt;gestures.clear());
+ let lastSound=0;
+ window.addEventListener(&#x27;wakuku:house-action&#x27;,e=&gt;{const d=e.detail;document.body.dataset.lastObject=d.tag;document.body.dataset.objectActive=String(d.active);
+  if(d.legacy){document.querySelector(&#x27;[aria-label=&quot;&#x27;+d.legacy+&#x27;&quot;]&#x27;)?.click();return;}
+  toast(d.text);playDollAction(d.tag===&#x27;床与枕头&#x27;&amp;&amp;d.active?&#x27;sleep&#x27;:&#x27;happy&#x27;);
+  if(d.tag===&#x27;床与枕头&#x27;&amp;&amp;d.active)window.WakukuCareReply?.(&#x27;我眯一会儿，陪在我身边吧。&#x27;);
+  if(d.tag===&#x27;阳台植物&#x27;)window.WakukuCareReply?.(&#x27;咕噜咕噜，小叶子也喝饱啦。&#x27;);
+  if(!muted&amp;&amp;performance.now()-lastSound&gt;250){Feedback.fx(&#x27;select&#x27;);lastSound=performance.now();}buzz(6);
+ });
+ const oldReset=reset;reset=function(...args){oldReset(...args);window.WakukuDoll?.resetGroundBall?.();};
+})();
 &lt;/script&gt;
 &lt;script src=&quot;model-part-00.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-01.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-02.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-03.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-04.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-05.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-06.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-07.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-08.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-09.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-10.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-11.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-12.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-13.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-14.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;wakuku_doll_glb.js&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;wakuku-runtime.js&quot;&gt;&lt;/script&gt;&lt;script&gt;
@@ -1559,6 +1652,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
   const ballTex=document.createElement(&#x27;canvas&#x27;);ballTex.width=256;ballTex.height=128;
   const ballPaint=ballTex.getContext(&#x27;2d&#x27;);ballPaint.fillStyle=&#x27;#85b6bf&#x27;;ballPaint.fillRect(0,0,256,128);ballPaint.fillStyle=&#x27;#fff1cb&#x27;;ballPaint.fillRect(45,0,8,128);ballPaint.fillRect(173,0,8,128);
   const heldBall=new THREE.Mesh(new THREE.SphereGeometry(.042,24,16),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(ballTex),roughness:.6}));heldBall.visible=false;scene.add(heldBall);
+  const ballAnchor=new THREE.Vector3(.35,.042,.15);let previousBallPhase=&quot;rest&quot;;
   const groundBall=new THREE.Mesh(heldBall.geometry,heldBall.material);groundBall.castShadow=true;scene.add(groundBall);
   const expressiveMeshes=[];const expression=[0,0,0];
   const bones={},rest={};let ready=false,current=null,started=0,lastFrame=0;
@@ -1619,7 +1713,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
   }
   function socket(name){const b=bone(name);return b?planePoint(b.getWorldPosition(new THREE.Vector3())):null;}
   function play(name){if(!(name in durations))throw new Error(`Unknown WAKUKU action: ${name}`);current=name;started=performance.now();}
-  window.WakukuDoll={setRoomMood:n=&gt;{window.WakukuRoomMood=n;key.color.setRGB(1,.83-n*.08,.65+n*.2);renderer.toneMappingExposure=1-n*.10;},setAtmosphere:on=&gt;{window.WakukuRoomLamp=on;rim.intensity=on?.65:.22;key.intensity=on?1.6:1.4;},play,setState:s=&gt;Object.assign(state,s),getSocket:()=&gt;heldBall.visible?planePoint(heldBall.position):socket((state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;)+&#x27;HandMiddle1&#x27;),getGroundBall:()=&gt;groundBall.visible?planePoint(groundBall.position):null,getMouth:()=&gt;ready?planePoint(bone(&#x27;Head&#x27;).localToWorld(mouthLocal.clone())):null};
+  window.WakukuDoll={setRoomMood:n=&gt;{window.WakukuRoomMood=n;key.color.setRGB(1,.83-n*.08,.65+n*.2);renderer.toneMappingExposure=1-n*.10;},setAtmosphere:on=&gt;{window.WakukuRoomLamp=on;rim.intensity=on?.65:.22;key.intensity=on?1.6:1.4;},play,setState:s=&gt;Object.assign(state,s),getSocket:()=&gt;heldBall.visible?planePoint(heldBall.position):socket((state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;)+&#x27;HandMiddle1&#x27;),interactRoom:p=&gt;{const ndc=new THREE.Vector2(p.x/432*2-1,1-p.y/(768*.82)*2);return roomModel.pick(camera,ndc,pivot);},resetGroundBall:()=&gt;ballAnchor.set(.35,.042,.15),getGroundBallWorld:()=&gt;({x:ballAnchor.x,z:ballAnchor.z}),getGroundBall:()=&gt;groundBall.visible?planePoint(groundBall.position):null,getMouth:()=&gt;ready?planePoint(bone(&#x27;Head&#x27;).localToWorld(mouthLocal.clone())):null};
   new GLTFLoader().load(window.WAKUKU_DOLL_GLB_URL,gltf=&gt;{
     gltf.scene.traverse(o=&gt;{
       if(o.isMesh){
@@ -1720,7 +1814,8 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
       container.dataset.action=(state.roamWeight||0)&gt;.1?&#x27;walk&#x27;:[&#x27;pickup&#x27;,&#x27;carry&#x27;,&#x27;offer&#x27;,&#x27;chase&#x27;].includes(phase)?phase:current||(state.brushing?&#x27;brush&#x27;:&#x27;idle&#x27;);
       if(current&amp;&amp;f&gt;=1&amp;&amp;current!==&#x27;sleep&#x27;)current=null;
     }
-    groundBall.visible=ready&amp;&amp;[&#x27;rest&#x27;,&#x27;idle&#x27;].includes(state.phase);groundBall.position.set(pivot.position.x+.35,.042,pivot.position.z+.15);
+    groundBall.visible=ready&amp;&amp;[&#x27;rest&#x27;,&#x27;idle&#x27;].includes(state.phase);if([&#x27;rest&#x27;,&#x27;idle&#x27;].includes(state.phase)&amp;&amp;[&#x27;carry&#x27;,&#x27;offer&#x27;].includes(previousBallPhase))ballAnchor.set(heldBall.position.x,.042,heldBall.position.z);
+    groundBall.position.copy(ballAnchor);previousBallPhase=state.phase;container.dataset.ballWorld=ballAnchor.x.toFixed(3)+&#x27;,&#x27;+ballAnchor.z.toFixed(3);container.dataset.heading=(state.roamHeading||0).toFixed(3);
     heldBall.visible=ready&amp;&amp;[&#x27;carry&#x27;,&#x27;offer&#x27;].includes(state.phase);
     if(heldBall.visible){heldBall.position.copy(bone((state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;)+&#x27;HandMiddle1&#x27;).getWorldPosition(new THREE.Vector3())).add(new THREE.Vector3(0,-.015,.045));}
     roomModel.alignControls(camera,pivot.position);
