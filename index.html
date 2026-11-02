@@ -949,7 +949,7 @@ dollHost.addEventListener(&#x27;wakuku:ready&#x27;,()=&gt;{
 drawDoll=function(){
  window.WakukuDoll?.setState?.({phase:toy.phase,age:toy.age,gait:fetcher.gait,side:fetcher.side,x:fetcher.x,homeX:window.WakukuWalk?.homeX||0,brushing:!!doll.brush,feedPhase:pet.feedPhase,feedClock:pet.feedClock});
  doll.mouth=window.WakukuDoll?.getMouth?.()||{x:215+fetcher.x,y:414};
- dollHost.style.transform=&quot;none&quot;;
+ dollHost.style.transform=&quot;none&quot;;if([&quot;rest&quot;,&quot;idle&quot;].includes(toy.phase)){const b=window.WakukuDoll?.getGroundBall?.();if(b)Object.assign(toy,b);}
 };
 const mealEnd3D=petFoodEnd;
 petFoodEnd=function(p){const before=pet.feedPhase;mealEnd3D(p);if(!before&amp;&amp;pet.feedPhase===1)playDollAction(&#x27;eat&#x27;);};
@@ -1030,7 +1030,7 @@ fetchStep=function(h){
  }else freeBallStep3D(h);
 };
 
-const groundToy3D=drawToy;drawToy=function(){if(dollReady&amp;&amp;[&#x27;carry&#x27;,&#x27;offer&#x27;].includes(toy.phase))return;withCareForeground(()=&gt;groundToy3D());};
+const groundToy3D=drawToy;drawToy=function(){if(dollReady&amp;&amp;[&#x27;carry&#x27;,&#x27;offer&#x27;,&#x27;rest&#x27;,&#x27;idle&#x27;].includes(toy.phase))return;withCareForeground(()=&gt;groundToy3D());};
 &lt;/script&gt;&lt;script&gt;// Interactive props are composited above WebGL; this canvas never captures input.
 const careForeground=document.getElementById(&#x27;care-foreground&#x27;);
 const careForegroundContext=careForeground.getContext(&#x27;2d&#x27;);
@@ -1332,14 +1332,14 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
  document.addEventListener(&#x27;keydown&#x27;,e=&gt;{const k=e.key.length===1?e.key.toLowerCase():e.key;if(!directions[k]||!available()||/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName||&#x27;&#x27;))return;e.preventDefault();if(!keys.size){stop();walk.manual=true;window.WakukuHouseOverview=false;if(dollSleeping)playDollAction(&#x27;tap&#x27;);}keys.add(k);keyInput();});
  document.addEventListener(&#x27;keyup&#x27;,e=&gt;{const k=e.key.length===1?e.key.toLowerCase():e.key;if(!keys.has(k))return;e.preventDefault();keys.delete(k);if(keys.size)keyInput();else stop();});
  window.addEventListener(&#x27;blur&#x27;,()=&gt;{keys.clear();joyPointer=null;stop();});
- document.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(e.target!==floor&amp;&amp;!nav.contains(e.target)&amp;&amp;e.target!==joy&amp;&amp;!joy.contains(e.target)){window.WakukuHouseOverview=false;stop();}},true);
+ document.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(!e.target.closest?.(&#x27;[data-camera-control]&#x27;)&amp;&amp;e.target!==floor&amp;&amp;!nav.contains(e.target)&amp;&amp;e.target!==joy&amp;&amp;!joy.contains(e.target)){window.WakukuHouseOverview=false;stop();}},true);
  canvas.addEventListener(&#x27;pointerup&#x27;,e=&gt;{const p=inputPoint(e);if(!paused&amp;&amp;pet.tool!==1&amp;&amp;!pet.feedPhase&amp;&amp;!pet.foodDrag&amp;&amp;!ballBusy()&amp;&amp;p.y&gt;280&amp;&amp;p.y&lt;535&amp;&amp;Math.abs(p.x-215-fetcher.x+walk.camera)&lt;90){playDollAction(&#x27;tap&#x27;);window.dispatchEvent(new CustomEvent(&#x27;wakuku:tap&#x27;));}});
  window.addEventListener(&#x27;wakuku:tap&#x27;,stop);document.addEventListener(&#x27;visibilitychange&#x27;,stop);gear.addEventListener(&#x27;click&#x27;,stop);
  const oldLaunch=launchBall;launchBall=function(...args){stop();walk.homeX=fetcher.x;oldLaunch(...args);};
  const oldUpdate=updatePolish;updatePolish=function(){oldUpdate();const h=Math.min(dt,.04),blocked=paused||document.hidden||!dollReady||dollSleeping||pet.feedPhase||pet.foodDrag||pointer||doll.brush||ballBusy()||toy.phase===&#x27;offer&#x27;;
   if(blocked){keys.clear();stop();}else if(walk.manual){
    const ox=fetcher.x,oz=walk.z,step=150*h,can=(x,z)=&gt;!window.WakukuHouseCollision?.(x/S,z/S);
-   const nx=ox+walk.inputX*step,nz=oz+walk.inputZ*step;
+   const yaw=window.WakukuCamera?.yaw||0,c=Math.cos(yaw),s=Math.sin(yaw);const nx=ox+(walk.inputX*c+walk.inputZ*s)*step,nz=oz+(-walk.inputX*s+walk.inputZ*c)*step;
    if(can(nx,nz)){fetcher.x=nx;walk.z=nz;}else{if(can(nx,oz))fetcher.x=nx;if(can(fetcher.x,nz))walk.z=nz;}
    const dx=fetcher.x-ox,dz=walk.z-oz,moved=Math.hypot(dx,dz);walk.moving=moved&gt;.02;walk.target=fetcher.x;walk.targetZ=walk.z;walk.path=[];fetcher.gait+=moved/24;
    if(walk.moving){const delta=Math.atan2(dx,dz)-walk.heading;walk.heading+=Math.atan2(Math.sin(delta),Math.cos(delta))*(1-Math.exp(-h*10));}
@@ -1350,7 +1350,7 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
    let step=Math.min(d,walk.speed*h);if(d&gt;.5){fetcher.x+=dx/d*step;walk.z+=dz/d*step;fetcher.gait+=step/24;walk.heading+=((Math.atan2(dx,dz))-walk.heading)*(1-Math.exp(-h*9));}else{fetcher.x=walk.target;walk.z=walk.targetZ;walk.speed=0;step=0;}
    walk.moving=step&gt;.02;doll.x=fetcher.x;
   }
-  walk.weight+=(Number(walk.moving)-walk.weight)*(1-Math.exp(-h*10));if(!walk.moving)walk.heading+=(0-walk.heading)*(1-Math.exp(-h*6));
+  walk.weight+=(Number(walk.moving)-walk.weight)*(1-Math.exp(-h*10));if(!walk.moving){const a=(window.WakukuCamera?.yaw||0)-walk.heading;walk.heading+=Math.atan2(Math.sin(a),Math.cos(a))*(1-Math.exp(-h*6));}
   walk.marker=Math.max(0,walk.marker-h);
   if(!ballBusy()&amp;&amp;toy.phase!==&#x27;offer&#x27;){walk.camera+=(fetcher.x-walk.camera)*(1-Math.exp(-h*5));walk.cameraZ+=(walk.z-walk.cameraZ)*(1-Math.exp(-h*5));}
   floor.disabled=!!(paused||pet.feedPhase||ballBusy()||toy.phase===&#x27;offer&#x27;);for(const b of nav.children)b.disabled=floor.disabled;
@@ -1359,6 +1359,26 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
  const oldDoll=drawDoll;drawDoll=function(){oldDoll();window.WakukuDoll?.setState?.({roamWeight:walk.weight,roamHeading:walk.heading});};
  const oldRoom=window.drawCozyRoom;window.drawCozyRoom=function(){oldRoom?.();txt(walk.manual?&#x27;摇杆自由走动 · 松手停下&#x27;:walk.moving?&#x27;正在走向&#x27;+walk.room+&#x27; · 点工具可停下&#x27;:&#x27;拖动摇杆自由走动 · 方向键 / WASD&#x27;,216,619,10,&#x27;#7b705b&#x27;,&#x27;center&#x27;);};
  const oldReset=reset;reset=function(...args){oldReset(...args);walk.z=0;stop();walk.weight=walk.heading=walk.camera=walk.cameraZ=0;walk.room=&#x27;客厅&#x27;;};
+})();
+&lt;/script&gt;&lt;script&gt;/* Orbit camera input is independent from the left movement joystick. */
+(()=&gt;{
+ const view=window.WakukuCamera={yaw:0,pitch:.29,zoom:1,targetYaw:0,targetPitch:.29,targetZoom:1};
+ const pad=document.createElement(&#x27;div&#x27;);pad.dataset.cameraControl=&#x27;true&#x27;;pad.setAttribute(&#x27;role&#x27;,&#x27;region&#x27;);pad.setAttribute(&#x27;aria-label&#x27;,&#x27;镜头控制区：拖动环绕，双指缩放&#x27;);pad.style.cssText=&#x27;position:absolute;right:0;top:28%;width:42%;height:47%;z-index:11;touch-action:none;cursor:grab&#x27;;document.body.append(pad);
+ const hint=document.createElement(&#x27;span&#x27;);hint.textContent=&#x27;拖动视角&#x27;;hint.style.cssText=&#x27;position:absolute;right:15px;bottom:3px;color:#796a50;font-size:10px;pointer-events:none&#x27;;pad.append(hint);
+ const home=document.createElement(&#x27;button&#x27;);home.textContent=&#x27;视角归位&#x27;;home.setAttribute(&#x27;aria-label&#x27;,&#x27;镜头回到正面&#x27;);home.style.cssText=&#x27;position:absolute;right:5%;top:72%;z-index:14;border:1px solid #fff2d4;background:#f7ebcdbb;border-radius:18px;color:#756347;padding:8px 10px;font-size:11px;min-height:36px&#x27;;home.dataset.cameraControl=&#x27;true&#x27;;document.body.append(home);
+ const points=new Map();let pinch=0;
+ function resetView(){view.targetYaw=0;view.targetPitch=.29;view.targetZoom=1;points.clear();pinch=0;}
+ window.WakukuResetCamera=resetView;home.onclick=resetView;
+ function enabled(){return !paused&amp;&amp;!pet.feedPhase&amp;&amp;!pet.foodDrag&amp;&amp;!ballBusy()&amp;&amp;pet.tool!==1;}
+ function distance(){const p=[...points.values()];return p.length===2?Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y):0;}
+ pad.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(!enabled())return;if(typeof takeBall===&#x27;function&#x27;&amp;&amp;takeBall(inputPoint(e),e)){resetView();e.stopPropagation();return;}e.preventDefault();e.stopPropagation();window.WakukuHouseOverview=false;points.set(e.pointerId,{x:e.clientX,y:e.clientY});pinch=distance();pad.setPointerCapture(e.pointerId);pad.style.cursor=&#x27;grabbing&#x27;;});
+ pad.addEventListener(&#x27;pointermove&#x27;,e=&gt;{const old=points.get(e.pointerId);if(!old)return;e.preventDefault();e.stopPropagation();points.set(e.pointerId,{x:e.clientX,y:e.clientY});if(points.size===2){const d=distance();if(pinch&gt;0)view.targetZoom=clamp(view.targetZoom*pinch/Math.max(10,d),.75,1.8);pinch=d;}else{view.targetYaw-=(e.clientX-old.x)*.009;view.targetPitch=clamp(view.targetPitch+(e.clientY-old.y)*.006,.12,1.10);}});
+ function release(e){points.delete(e.pointerId);pinch=distance();if(!points.size)pad.style.cursor=&#x27;grab&#x27;;}
+ for(const type of [&#x27;pointerup&#x27;,&#x27;pointercancel&#x27;,&#x27;lostpointercapture&#x27;])pad.addEventListener(type,release);
+ document.addEventListener(&#x27;wheel&#x27;,e=&gt;{if(!enabled()||inputPoint(e).y&gt;630)return;e.preventDefault();view.targetZoom=clamp(view.targetZoom+e.deltaY*.001,.75,1.8);},{passive:false});
+ document.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(e.target===canvas&amp;&amp;inputPoint(e).y&gt;=630)resetView();},true);
+ window.addEventListener(&#x27;blur&#x27;,()=&gt;{points.clear();pinch=0;});document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{points.clear();pinch=0;});
+ const old=updatePolish;updatePolish=function(){old();pad.style.pointerEvents=enabled()?&#x27;auto&#x27;:&#x27;none&#x27;;if(!enabled())points.clear();if(!paused&amp;&amp;!document.hidden){const k=1-Math.exp(-Math.min(dt,.04)*12);view.yaw+=(view.targetYaw-view.yaw)*k;view.pitch+=(view.targetPitch-view.pitch)*k;view.zoom+=(view.targetZoom-view.zoom)*k;}pad.dataset.yaw=view.yaw.toFixed(3);pad.dataset.pitch=view.pitch.toFixed(3);pad.dataset.zoom=view.zoom.toFixed(3);};
 })();
 &lt;/script&gt;&lt;script&gt;/* Original procedural low-poly furniture; no downloaded textures or external assets. */
 window.createWakukuRoom=function(THREE,scene){
@@ -1458,7 +1478,9 @@ window.createWakukuRoom=function(THREE,scene){
  group.userData.assetSource=&#x27;Procedural original geometry&#x27;;
  const anchors={&#x27;开关小屋暖灯&#x27;:[.44,.79,-.40],&#x27;给小植物浇水&#x27;:[-.48,.25,-.25],&#x27;轻拨窗边风铃&#x27;:[-.435,1.02,-.54],&#x27;切换午后与星夜&#x27;:[-.43,1.08,-.677],&#x27;转动音乐盒&#x27;:[.47,.105,.15],&#x27;吹一串泡泡&#x27;:[-.47,.065,.40]};
  const controls={};
- return {alignControls(camera,player){for(const o of group.children){if(Math.abs(o.position.z-2.65)&lt;.001)o.visible=!!window.WakukuHouseOverview||player.x&gt;-.9||player.z&lt;.65;if(o.material===partition||(Math.abs(Math.abs(o.position.z)-.66)&lt;.001&amp;&amp;o.position.y&gt;1.4))o.visible=o.position.z&lt;player.z-.25||Math.abs(o.position.x-player.x)&gt;1.15;}for(const [label,xyz] of Object.entries(anchors)){const b=controls[label]||=document.querySelector(`[aria-label=&quot;${label}&quot;]`);if(!b)continue;const v=new THREE.Vector3(xyz[0],xyz[1],xyz[2]&lt;( -.2)?xyz[2]-1.85:xyz[2]).project(camera);b.hidden=window.WakukuHouseOverview||v.x &lt; -1.05 || v.x &gt; 1.05 || v.y &lt; -1 || v.y &gt; 1; b.style.left=`${(v.x+1)*50}%`;b.style.top=`${(1-v.y)*41}%`;b.style.transform=&#x27;translate(-50%,-50%)&#x27;;}},update(night,lamp,time,music){glow.intensity=lamp?.34:0;shade.emissiveIntensity=lamp?.2:0;sky.color.set(night&gt;.5?&#x27;#667e9c&#x27;:&#x27;#b9d8d0&#x27;);bird.rotation.y=music?time*2:0;for(let i=0;i&lt;bells.length;i++)bells[i].rotation.z=Math.sin(time*1.5+i)*.025;}};
+ return {alignControls(camera,player){const aim=player.clone().add(new THREE.Vector3(0,.48,0));const ray=new THREE.Ray(camera.position.clone(),aim.clone().sub(camera.position).normalize()),length=camera.position.distanceTo(aim);
+ for(const o of group.children){if(o.material===partition||(o.geometry?.type===&#x27;BoxGeometry&#x27;&amp;&amp;o.geometry.parameters.height&gt;1.3)||Math.abs(o.position.z-2.65)&lt;.001||(Math.abs(Math.abs(o.position.z)-.66)&lt;.001&amp;&amp;o.position.y&gt;1.4)){o.visible=true;const hit=ray.intersectBox(new THREE.Box3().setFromObject(o).expandByScalar(.18),new THREE.Vector3());if(!window.WakukuHouseOverview&amp;&amp;hit&amp;&amp;camera.position.distanceTo(hit)&lt;length)o.visible=false;}}
+ for(const [label,xyz] of Object.entries(anchors)){const b=controls[label]||=document.querySelector(`[aria-label=&quot;${label}&quot;]`);if(!b)continue;const v=new THREE.Vector3(xyz[0],xyz[1],xyz[2]&lt;( -.2)?xyz[2]-1.85:xyz[2]).project(camera);b.hidden=window.WakukuHouseOverview||v.x &lt; -1.05 || v.x &gt; 1.05 || v.y &lt; -1 || v.y &gt; 1; b.style.left=`${(v.x+1)*50}%`;b.style.top=`${(1-v.y)*41}%`;b.style.transform=&#x27;translate(-50%,-50%)&#x27;;}},update(night,lamp,time,music){glow.intensity=lamp?.34:0;shade.emissiveIntensity=lamp?.2:0;sky.color.set(night&gt;.5?&#x27;#667e9c&#x27;:&#x27;#b9d8d0&#x27;);bird.rotation.y=music?time*2:0;for(let i=0;i&lt;bells.length;i++)bells[i].rotation.z=Math.sin(time*1.5+i)*.025;}};
 };
 &lt;/script&gt;
 &lt;script src=&quot;model-part-00.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-01.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-02.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-03.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-04.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-05.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-06.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-07.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-08.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-09.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-10.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-11.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-12.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-13.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;model-part-14.js&quot;&gt;&lt;/script&gt;&lt;script src=&quot;wakuku_doll_glb.js&quot;&gt;&lt;/script&gt;
@@ -1514,6 +1536,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
   const ballTex=document.createElement(&#x27;canvas&#x27;);ballTex.width=256;ballTex.height=128;
   const ballPaint=ballTex.getContext(&#x27;2d&#x27;);ballPaint.fillStyle=&#x27;#85b6bf&#x27;;ballPaint.fillRect(0,0,256,128);ballPaint.fillStyle=&#x27;#fff1cb&#x27;;ballPaint.fillRect(45,0,8,128);ballPaint.fillRect(173,0,8,128);
   const heldBall=new THREE.Mesh(new THREE.SphereGeometry(.042,24,16),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(ballTex),roughness:.6}));heldBall.visible=false;scene.add(heldBall);
+  const groundBall=new THREE.Mesh(heldBall.geometry,heldBall.material);groundBall.castShadow=true;scene.add(groundBall);
   const expressiveMeshes=[];const expression=[0,0,0];
   const bones={},rest={};let ready=false,current=null,started=0,lastFrame=0;
   const state={phase:&#x27;rest&#x27;,age:0,gait:0,side:1,x:0,brushing:false};
@@ -1573,7 +1596,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
   }
   function socket(name){const b=bone(name);return b?planePoint(b.getWorldPosition(new THREE.Vector3())):null;}
   function play(name){if(!(name in durations))throw new Error(`Unknown WAKUKU action: ${name}`);current=name;started=performance.now();}
-  window.WakukuDoll={setRoomMood:n=&gt;{window.WakukuRoomMood=n;key.color.setRGB(1,.83-n*.08,.65+n*.2);renderer.toneMappingExposure=1-n*.10;},setAtmosphere:on=&gt;{window.WakukuRoomLamp=on;rim.intensity=on?.65:.22;key.intensity=on?1.6:1.4;},play,setState:s=&gt;Object.assign(state,s),getSocket:()=&gt;heldBall.visible?planePoint(heldBall.position):socket((state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;)+&#x27;HandMiddle1&#x27;),getMouth:()=&gt;ready?planePoint(bone(&#x27;Head&#x27;).localToWorld(mouthLocal.clone())):null};
+  window.WakukuDoll={setRoomMood:n=&gt;{window.WakukuRoomMood=n;key.color.setRGB(1,.83-n*.08,.65+n*.2);renderer.toneMappingExposure=1-n*.10;},setAtmosphere:on=&gt;{window.WakukuRoomLamp=on;rim.intensity=on?.65:.22;key.intensity=on?1.6:1.4;},play,setState:s=&gt;Object.assign(state,s),getSocket:()=&gt;heldBall.visible?planePoint(heldBall.position):socket((state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;)+&#x27;HandMiddle1&#x27;),getGroundBall:()=&gt;groundBall.visible?planePoint(groundBall.position):null,getMouth:()=&gt;ready?planePoint(bone(&#x27;Head&#x27;).localToWorld(mouthLocal.clone())):null};
   new GLTFLoader().load(window.WAKUKU_DOLL_GLB_URL,gltf=&gt;{
     gltf.scene.traverse(o=&gt;{
       if(o.isMesh){
@@ -1613,8 +1636,8 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
     if(dragX===null){turnVel+=-turn*.02;turnVel*=.85;turn+=turnVel;}
     roomModel.update(window.WakukuRoomMood||0,window.WakukuRoomLamp!==false,now/1000,window.WakukuRoomMusic);
     const explore=window.WakukuWalk;
-    if(explore){const cx=explore.camera/341.333,cz=explore.cameraZ/341.333;camera.position.set(cx,1.68,2.9+cz);camera.lookAt(cx,.815,cz);if(window.WakukuHouseOverview){camera.position.set(0,6,6);camera.lookAt(0,0,0);}const half=window.WakukuHouseOverview?5.2:.9225;camera.top=half;camera.bottom=-half;camera.left=-half*container.clientWidth/container.clientHeight;camera.right=-camera.left;camera.updateProjectionMatrix();camera.updateMatrixWorld();}
-    pivot.position.set((state.x||0)/341.333,0,(explore?.z||0)/341.333);shadow.position.x=pivot.position.x;pivot.rotation.set(0,turn,0);pivot.scale.set(1,1,1);
+    if(explore){const cx=explore.camera/341.333,cz=explore.cameraZ/341.333;const orbit=window.WakukuCamera||{yaw:0,pitch:.29,zoom:1};camera.position.set(cx+Math.sin(orbit.yaw)*Math.cos(orbit.pitch)*3.03,.815+Math.sin(orbit.pitch)*3.03,cz+Math.cos(orbit.yaw)*Math.cos(orbit.pitch)*3.03);camera.lookAt(cx,.815,cz);if(window.WakukuHouseOverview){camera.position.set(0,6,6);camera.lookAt(0,0,0);}const half=window.WakukuHouseOverview?5.2:.9225*orbit.zoom;camera.top=half;camera.bottom=-half;camera.left=-half*container.clientWidth/container.clientHeight;camera.right=-camera.left;camera.updateProjectionMatrix();camera.updateMatrixWorld();}
+    pivot.position.set((state.x||0)/341.333,0,(explore?.z||0)/341.333);shadow.position.x=pivot.position.x;shadow.position.z=pivot.position.z;pivot.rotation.set(0,turn,0);pivot.scale.set(1,1,1);
     if(ready){
       resetBones();let crouch=0;let reaching=false;
       const age=current?(now-started)/1000:0;
@@ -1674,6 +1697,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
       container.dataset.action=(state.roamWeight||0)&gt;.1?&#x27;walk&#x27;:[&#x27;pickup&#x27;,&#x27;carry&#x27;,&#x27;offer&#x27;,&#x27;chase&#x27;].includes(phase)?phase:current||(state.brushing?&#x27;brush&#x27;:&#x27;idle&#x27;);
       if(current&amp;&amp;f&gt;=1&amp;&amp;current!==&#x27;sleep&#x27;)current=null;
     }
+    groundBall.visible=ready&amp;&amp;[&#x27;rest&#x27;,&#x27;idle&#x27;].includes(state.phase);groundBall.position.set(pivot.position.x+.35,.042,pivot.position.z+.15);
     heldBall.visible=ready&amp;&amp;[&#x27;carry&#x27;,&#x27;offer&#x27;].includes(state.phase);
     if(heldBall.visible){heldBall.position.copy(bone((state.side&gt;0?&#x27;Left&#x27;:&#x27;Right&#x27;)+&#x27;HandMiddle1&#x27;).getWorldPosition(new THREE.Vector3())).add(new THREE.Vector3(0,-.015,.045));}
     roomModel.alignControls(camera,pivot.position);
