@@ -1690,7 +1690,7 @@ window.installWakukuPetModel=function(T,Loader,p,url){
  },undefined,e=&gt;{console.error(&#x27;Pet model failed&#x27;,p.kind,e);document.body.dataset[p.kind+&#x27;Model&#x27;]=&#x27;failed&#x27;;});
 };
 &lt;/script&gt;
-&lt;script&gt;/* Original low-poly companion animals, no external model or network dependency. */
+&lt;script&gt;/* Tripo companions with local fallback, reachable wandering goals and care interactions. */
 window.createWakukuPets=function(T,scene,Loader){
  const pets=[],ray=new T.Raycaster(),up=new T.Vector3(0,1,0);let last=0;
  const mat=c=&gt;new T.MeshStandardMaterial({color:c,roughness:.92});
@@ -1757,34 +1757,43 @@ window.createWakukuPets=function(T,scene,Loader){
   const p={kind,root,body,head,ears,eyes,legs,tail,heading:cat?.22:-.22,clock:0,mode:&#x27;rest&#x27;,until:cat?3:5,rest:1,seed:cat?31:83};pets.push(p);
   root.traverse(o=&gt;{o.userData.pet=kind;});return p;
  }
- animal(&#x27;cat&#x27;,-.48,.05);animal(&#x27;dog&#x27;,.48,.18);
+ animal(&#x27;cat&#x27;,-.48,.05);animal(&#x27;dog&#x27;,.75,0);
  for(const p of pets)if(Loader&amp;&amp;window.WAKUKU_PET_ASSETS?.[p.kind])window.installWakukuPetModel(T,Loader,p,window.WAKUKU_PET_ASSETS[p.kind]);
  function random(p){p.seed=p.seed*16807%2147483647;return p.seed/2147483647;}
+ function clearFor(p,x,z){
+  if(window.WakukuHouseCollision?.(x,z))return false;
+  for(const q of [...pets.filter(q=&gt;q!==p).map(q=&gt;q.root.position),window.WakukuPlayerPosition]){if(!q)continue;const before=Math.hypot(p.root.position.x-q.x,p.root.position.z-q.z),after=Math.hypot(x-q.x,z-q.z);if(after&lt;.30&amp;&amp;after&lt;=before+.00001)return false;}
+  return true;
+ }
+ function plan(p){
+  const step=.15,at=(i,j)=&gt;[i*step,j*step],start=[Math.round(p.root.position.x/step),Math.round(p.root.position.z/step)],key=(i,j)=&gt;i+&#x27;,&#x27;+j;
+  const queue=[start],seen=new Map([[key(...start),null]]),choices=[];
+  for(let n=0;n&lt;queue.length&amp;&amp;n&lt;1800;n++){const a=queue[n],v=at(...a),distance=Math.hypot(v[0]-p.root.position.x,v[1]-p.root.position.z);if(distance&gt;.65&amp;&amp;distance&lt;2.2)choices.push(a);
+   for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]){const i=a[0]+di,j=a[1]+dj,k=key(i,j);if(Math.abs(i)&gt;20||Math.abs(j)&gt;16||seen.has(k))continue;const v=at(i,j),mid=at((i+a[0])/2,(j+a[1])/2);if(!clearFor(p,...v)||!clearFor(p,...mid))continue;seen.set(k,a);queue.push([i,j]);}
+  }
+  if(!choices.length)return [];const end=choices[Math.floor(random(p)*choices.length)],route=[];
+  for(let a=end;a;a=seen.get(key(...a)))route.unshift(at(...a));return route;
+ }
  function request(p){const c=p.root.position;return window.WakukuDailyRequest?.(p.kind===&#x27;cat&#x27;?&#x27;小猫&#x27;:&#x27;小狗&#x27;,{x:c.x,y:.2,z:c.z},()=&gt;{},()=&gt;{});}
  for(const p of pets){const button=document.createElement(&#x27;button&#x27;);button.textContent=p.kind===&#x27;cat&#x27;?&#x27;陪小猫玩&#x27;:&#x27;陪小狗玩&#x27;;button.setAttribute(&#x27;aria-label&#x27;,button.textContent);button.style.cssText=&#x27;min-height:38px;border:1px solid #d8c5a2;border-radius:12px;background:#fff8e8;color:#6f5c40;padding:7px 12px&#x27;;button.onclick=()=&gt;{request(p);window.WakukuCloseObjectList?.();};document.querySelector(&#x27;#house-object-list&#x27;).append(button);}
  const api=window.WakukuPets={get:kind=&gt;{const p=pets.find(p=&gt;p.kind===kind);return p?{x:p.root.position.x,y:.25,z:p.root.position.z}:null;},pick(camera,ndc){ray.setFromCamera(ndc,camera);const hit=ray.intersectObjects(pets.map(p=&gt;p.root),true)[0];if(!hit)return false;request(pets.find(p=&gt;p.kind===hit.object.userData.pet));return true;},update(now){const dt=Math.min(.04,Math.max(0,(now-last)/1000));last=now;
  for(const p of pets){p.clock+=dt;const a=window.WakukuDaily,playing=a?.type===p.kind,walking=window.WakukuWalk;let targetRest=0;
   if(playing){p.mode=&#x27;play&#x27;;p.until=p.clock+3;const x=(window.WakukuPlayerPosition?.x||0)-p.root.position.x,z=(window.WakukuPlayerPosition?.z||0)-p.root.position.z;p.heading=Math.atan2(x,z);}
-  else if(p.clock&gt;p.until){p.mode=p.mode===&#x27;walk&#x27;?&#x27;rest&#x27;:&#x27;walk&#x27;;p.until=p.clock+4+random(p)*7;p.heading+=(random(p)-.5)*3.5;}
+  else if(p.clock&gt;p.until){
+   if(p.mode===&#x27;walk&#x27;){p.mode=&#x27;rest&#x27;;p.until=p.clock+2+random(p)*3;p.path=[];}
+   else{p.path=plan(p);p.mode=p.path.length?&#x27;walk&#x27;:&#x27;rest&#x27;;p.until=p.clock+(p.path.length?40:3);}
+  }
   let moved=false;
   if(p.mode===&#x27;walk&#x27;&amp;&amp;!playing){
-   const step=dt*.12,origin=p.root.position,other=pets.find(q=&gt;q!==p),actor=window.WakukuPlayerPosition;
-   const clear=(x,z)=&gt;{
-    if(window.WakukuHouseCollision?.(x,z))return false;
-    for(const q of [other.root.position,actor]){if(!q)continue;const before=Math.hypot(origin.x-q.x,origin.z-q.z),after=Math.hypot(x-q.x,z-q.z);if(after&lt;.30&amp;&amp;after&lt;=before+.00001)return false;}
-    return true;
-   };
-   const next=(angle,d)=&gt;[origin.x+Math.sin(angle)*d,origin.z+Math.cos(angle)*d];
-   let [nx,nz]=next(p.heading,step);
-   if(!clear(...next(p.heading,.12))||!clear(nx,nz)){
-    if(p.clock&gt;=(p.retryAt||0)){
-     const candidates=[Math.PI/3,-Math.PI/3,Math.PI/2,-Math.PI/2,Math.PI,-Math.PI*2/3,Math.PI*2/3];
-     const turn=candidates.find(a=&gt;[.025,.07,.12].every(d=&gt;clear(...next(p.heading+a,d))));
-     if(turn!==undefined){p.heading+=turn;p.retryAt=p.clock+1.1;[nx,nz]=next(p.heading,step);}
-     else{p.mode=&#x27;rest&#x27;;p.until=p.clock+3+random(p)*3;}
-    }else{p.mode=&#x27;rest&#x27;;p.until=p.clock+2+random(p)*2;}
+   const goal=p.path?.[0],o=p.root.position;
+   if(!goal){p.mode=&#x27;rest&#x27;;p.until=p.clock+2+random(p)*3;}
+   else{const dx=goal[0]-o.x,dz=goal[1]-o.z,d=Math.hypot(dx,dz),step=Math.min(d,dt*.18);
+    if(d&lt;.025)p.path.shift();
+    else{const nx=o.x+dx/d*step,nz=o.z+dz/d*step;
+     if(clearFor(p,nx,nz)){p.heading=Math.atan2(dx,dz);o.x=nx;o.z=nz;moved=true;p.blocked=0;}
+     else{p.blocked=(p.blocked||0)+dt;if(p.blocked&gt;.6){p.mode=&#x27;rest&#x27;;p.until=p.clock+1.5;p.path=[];p.blocked=0;}}
+    }
    }
-   if(p.mode===&#x27;walk&#x27;&amp;&amp;clear(nx,nz)){origin.x=nx;origin.z=nz;moved=true;}
   }
   targetRest=p.mode===&#x27;rest&#x27;?1:0;p.rest+=(targetRest-p.rest)*(1-Math.exp(-dt*3));p.body.position.y=-.02*p.rest;p.body.scale.y=p.tripo?1:1-.18*p.rest;p.root.rotation.y+=Math.atan2(Math.sin(p.heading-p.root.rotation.y),Math.cos(p.heading-p.root.rotation.y))*(1-Math.exp(-dt*4));
   const stride=moved?Math.sin(p.clock*9)*.36:0;for(let i=0;i&lt;4;i++){p.legs[i].rotation.x=stride*(i===0||i===3?1:-1)-.28*p.rest;if(!p.tripo){p.legs[i].position.y=.10+.035*p.rest;p.legs[i].scale.y=1-.40*p.rest;}}
