@@ -1307,7 +1307,7 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
  const S=341.333,walk=window.WakukuWalk={target:0,targetZ:0,z:0,speed:0,weight:0,heading:0,idle:0,moving:false,marker:0,camera:0,cameraZ:0,homeX:0,path:[],room:&#x27;客厅&#x27;,manual:false,inputX:0,inputZ:0};
  const rooms={&#x27;厨房&#x27;:[-1.85,-1.65],&#x27;卧室&#x27;:[1.85,-.88],&#x27;客厅&#x27;:[0,0],&#x27;阳台&#x27;:[-1.85,1.45],&#x27;洗手间&#x27;:[1.85,1.45]};
  function stop(){walk.manual=false;walk.inputX=walk.inputZ=0;if(typeof knob!==&#x27;undefined&#x27;)knob.style.transform=&#x27;translate(-50%,-50%)&#x27;;walk.path=[];walk.target=fetcher.x;walk.targetZ=walk.z;walk.speed=0;walk.moving=false;walk.idle=0;}
- function available(){return !paused&amp;&amp;dollReady&amp;&amp;!pet.feedPhase&amp;&amp;!pet.foodDrag&amp;&amp;!ballBusy()&amp;&amp;toy.phase!==&#x27;offer&#x27;;}
+ function available(){return !(window.WakukuDaily?.type===&#x27;swing&#x27;&amp;&amp;window.WakukuDaily.stage!==&#x27;approach&#x27;)&amp;&amp;!paused&amp;&amp;dollReady&amp;&amp;!pet.feedPhase&amp;&amp;!pet.foodDrag&amp;&amp;!ballBusy()&amp;&amp;toy.phase!==&#x27;offer&#x27;;}
  function visit(name){if(!available())return;window.WakukuHouseOverview=false;const [x,z]=rooms[name];stop();walk.room=name;
   // Doorways are centered at x ±1.85; first leave the current room through its doorway.
   if(Math.abs(walk.z)&gt;.5*S&amp;&amp;Math.abs(fetcher.x)&gt;S){walk.path.push([Math.sign(fetcher.x)*1.85*S,walk.z],[Math.sign(fetcher.x)*1.85*S,0]);}
@@ -1493,7 +1493,7 @@ window.createWakukuRoom=function(THREE,scene){
  // Music box and bird, plus the bubble bottle on the rug edge.
  cylinder(.47,.035,.15,.095,.095,.055,lightWood);const bird=orb(.47,.105,.15,.036,.022,.022,wood);orb(.495,.126,.15,.018,.018,.018,cream);
  item=&#x27;泡泡瓶&#x27;;
- cylinder(-.47,.065,.40,.032,.032,.12,mat(&#x27;#b3cbc0&#x27;));cylinder(-.47,.135,.40,.023,.023,.023,wood);
+ cylinder(-.12,.285,.75,.032,.032,.12,mat(&#x27;#b3cbc0&#x27;));cylinder(-.12,.355,.75,.023,.023,.023,wood);
  // Shift the original care corner against the back wall.
  for(const o of group.children){if(o.position.z&lt;-.2&amp;&amp;o.position.z&gt;-.8)o.position.z-=1.85;}
  glow.position.z-=1.85;
@@ -1595,11 +1595,17 @@ window.createWakukuRoom=function(THREE,scene){
  item=&#x27;阳台植物&#x27;;
  for(const x of [-2.9,-1.25]){box(x,.16,2.3,.36,.30,.35,terra);for(let i=0;i&lt;5;i++)orb(x+Math.sin(i*2)*.10,.40+i*.045,2.3+Math.cos(i)*.06,.08,.15,.07,green);}
  item=&#x27;阳台秋千&#x27;;
- for(const x of [-2.94,-2.16]){box(x,.70,1.45,.055,1.36,.07,wood);box(x,.045,1.45,.13,.07,.62,wood);}
- box(-2.55,1.39,1.45,.89,.075,.08,lightWood);
+ const swingWood=mat(&#x27;#c6a47a&#x27;),swingRope=mat(&#x27;#d8c8a9&#x27;),swingCushion=mat(&#x27;#eee0ca&#x27;);
+ function beam(from,to,r,material){const a=new THREE.Vector3(...from),b=new THREE.Vector3(...to),v=b.clone().sub(a);const o=mesh(new THREE.CylinderGeometry(r,r,v.length(),12),material,...a.clone().add(b).multiplyScalar(.5).toArray());o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());return o;}
+ for(const x of [-2.97,-2.13]){for(const z of [1.10,1.80])beam([x,.035,z],[x,1.43,1.45],.027,swingWood);beam([x,.28,1.15],[x,.28,1.75],.018,swingWood);}
+ beam([-3.02,1.43,1.45],[-2.08,1.43,1.45],.037,swingWood);
+ for(const x of [-2.80,-2.30]){const hook=mesh(new THREE.TorusGeometry(.023,.005,6,16),mat(&#x27;#9a8563&#x27;),x,1.39,1.45);hook.rotation.y=Math.PI/2;}
  const swingStart=group.children.length;
- box(-2.55,.35,1.45,.56,.06,.34,lightWood);box(-2.55,.50,1.31,.56,.28,.035,cream);
- for(const x of [-2.78,-2.32])cylinder(x,.875,1.45,.009,.009,1.02,cream,8);
+ for(let i=0;i&lt;5;i++)box(-2.55,.345,1.31+i*.068,.60,.035,.059,lightWood);
+ for(const x of [-2.78,-2.32]){beam([x,.35,1.31],[x,.64,1.31],.014,swingWood);beam([x,.37,1.59],[x,.53,1.59],.014,swingWood);beam([x,.53,1.31],[x,.53,1.59],.017,swingWood);}
+ for(let i=0;i&lt;3;i++)box(-2.55,.45+i*.065,1.30,.56,.047,.028,lightWood);
+ orb(-2.55,.385,1.46,.26,.043,.14,swingCushion);
+ for(const x of [-2.80,-2.30])for(const z of [1.31,1.59])beam([x,1.39,1.45],[x,.37,z],.007,swingRope);
  for(const o of group.children.slice(swingStart))o.userData.swing=true;
  for(const o of group.children)if(o.userData.item===&#x27;茶几&#x27;)o.position.z+=2.0;
  for(const o of group.children)if(o.userData.item===&#x27;绿植&#x27;){o.position.x-=.14;o.position.z+=1.15;}
@@ -1621,7 +1627,7 @@ window.createWakukuRoom=function(THREE,scene){
  }
  window.WakukuHouseCollision=(x,z)=&gt;{const r=.15;if(x&lt; -3.12||x&gt;3.12||z&lt; -2.48||z&gt;2.48)return true;return obstacles.some(b=&gt;x+r&gt;b.x0&amp;&amp;x-r&lt;b.x1&amp;&amp;z+r&gt;b.z0&amp;&amp;z-r&lt;b.z1);};
  group.userData.assetSource=&#x27;Procedural original geometry&#x27;;
- const anchors={&#x27;开关小屋暖灯&#x27;:[.44,.79,-.40],&#x27;给小植物浇水&#x27;:[-.62,.25,-.95],&#x27;轻拨窗边风铃&#x27;:[-.435,1.02,-.54],&#x27;切换午后与星夜&#x27;:[-.43,1.08,-.677],&#x27;转动音乐盒&#x27;:[.47,.105,.15],&#x27;吹一串泡泡&#x27;:[-.47,.065,.40]};
+ const anchors={&#x27;开关小屋暖灯&#x27;:[.44,.79,-.40],&#x27;给小植物浇水&#x27;:[-.62,.25,-.95],&#x27;轻拨窗边风铃&#x27;:[-.435,1.02,-.54],&#x27;切换午后与星夜&#x27;:[-.43,1.08,-.677],&#x27;转动音乐盒&#x27;:[.47,.105,.15],&#x27;吹一串泡泡&#x27;:[-.12,.285,.75]};
  // Keep collision footprints above intact; presentation uses low cutaway partitions.
  const cutaways=[];group.updateMatrixWorld(true);
  for(const o of group.children){const interior=o.material===partition,lintel=Math.abs(Math.abs(o.position.z)-.66)&lt;.001&amp;&amp;o.position.y&gt;1.4;
@@ -1736,7 +1742,7 @@ window.installTripoFurniture=function(THREE,GLTFLoader,room){
  const gestures=new Map();
  document.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(e.target!==canvas&amp;&amp;!e.target.closest?.(&#x27;[data-camera-control]&#x27;))return;if(inputPoint(e).y&gt;=610||!window.WakukuHouseCanInteract())return;gestures.set(e.pointerId,{x:e.clientX,y:e.clientY,time:performance.now(),moved:false});},true);
  window.addEventListener(&#x27;pointermove&#x27;,e=&gt;{const g=gestures.get(e.pointerId);if(g&amp;&amp;Math.hypot(e.clientX-g.x,e.clientY-g.y)&gt;7)g.moved=true;},true);
- window.addEventListener(&#x27;pointerup&#x27;,e=&gt;{const g=gestures.get(e.pointerId);gestures.delete(e.pointerId);if(!g||g.moved||performance.now()-g.time&gt;650||pet.tool===1||!window.WakukuHouseCanInteract())return;window.WakukuDoll?.interactRoom?.(inputPoint(e));},true);
+ window.addEventListener(&#x27;pointerup&#x27;,e=&gt;{const g=gestures.get(e.pointerId);gestures.delete(e.pointerId);if(!g||g.moved||performance.now()-g.time&gt;650||(pet.tool===1&amp;&amp;window.WakukuDaily?.type!==&#x27;swing&#x27;)||!window.WakukuHouseCanInteract())return;window.WakukuDoll?.interactRoom?.(inputPoint(e));},true);
  window.addEventListener(&#x27;pointercancel&#x27;,e=&gt;gestures.delete(e.pointerId));window.addEventListener(&#x27;blur&#x27;,()=&gt;gestures.clear());
  const dailyTypes={&#x27;沙发&#x27;:&#x27;sit&#x27;,&#x27;电视&#x27;:&#x27;tv&#x27;,&#x27;绿植&#x27;:&#x27;water&#x27;,&#x27;阳台植物&#x27;:&#x27;water&#x27;,&#x27;洗手台&#x27;:&#x27;wash&#x27;,&#x27;厨房水槽&#x27;:&#x27;wash&#x27;,&#x27;阳台秋千&#x27;:&#x27;swing&#x27;,&#x27;积木&#x27;:&#x27;blocks&#x27;,&#x27;床与枕头&#x27;:&#x27;bed&#x27;,&#x27;小猫&#x27;:&#x27;cat&#x27;,&#x27;小狗&#x27;:&#x27;dog&#x27;};
  const labels={sit:&#x27;坐沙发&#x27;,tv:&#x27;看电视&#x27;,water:&#x27;浇花&#x27;,wash:&#x27;洗手&#x27;,swing:&#x27;坐秋千&#x27;,blocks:&#x27;搭积木&#x27;,bed:&#x27;上床睡觉&#x27;,cat:&#x27;陪小猫玩&#x27;,dog:&#x27;陪小狗玩&#x27;};
@@ -1750,7 +1756,7 @@ window.installTripoFurniture=function(THREE,GLTFLoader,room){
   if(window.WakukuDaily||!window.WakukuHouseCanInteract())return true;
   let target,heading,seat=null;
   if(type===&#x27;sit&#x27;||type===&#x27;tv&#x27;){target=[-.4,-1.4];heading=type===&#x27;tv&#x27;?.85:0;seat=[0,-1.78];}
-  else if(type===&#x27;swing&#x27;){target=[-2.55,.95];heading=0;seat=[-2.55,1.43];}
+  else if(type===&#x27;swing&#x27;){target=[-2.55,1.98];heading=0;seat=[-2.55,1.43];}
   else if(type===&#x27;cat&#x27;||type===&#x27;dog&#x27;){const p=window.WakukuPets?.get(type)||center;const candidates=[[p.x+.38,p.z],[p.x-.38,p.z],[p.x,p.z+.38],[p.x,p.z-.38]];target=candidates.find(([x,z])=&gt;!window.WakukuHouseCollision?.(x,z))||candidates[0];heading=Math.atan2(p.x-target[0],p.z-target[1]);}
   else if(type===&#x27;bed&#x27;){target=[1.85,-.78];heading=0;seat=[1.85,-1.30];}
   else if(type===&#x27;blocks&#x27;){target=[-.45,1.55];heading=0;}
@@ -1758,15 +1764,15 @@ window.installTripoFurniture=function(THREE,GLTFLoader,room){
   else if(tag===&#x27;厨房水槽&#x27;){target=[-2.27,-1.85];heading=Math.atan2(center.x-target[0],center.z-target[1]);}
   else{target=tag===&#x27;绿植&#x27;?[-.62,-.5]:[center.x&lt;-2.1?-2.45:center.x,center.x&lt;-2.1?2.1:1.83];heading=Math.atan2(center.x-target[0],center.z-target[1]);}
   if(!window.WakukuNavigateTo?.(...target)){toast(&#x27;这边暂时走不过去，先换个位置吧。&#x27;);return true;}
-  window.WakukuWalk.room=tag;window.WakukuDaily={type,tag,stage:&#x27;approach&#x27;,clock:0,blend:0,heading,seat,center,target,begin,finish};cancel.textContent=type===&#x27;bed&#x27;?&#x27;起床&#x27;:&#x27;结束活动&#x27;;cancel.hidden=false;toast(&#x27;苔苔走过去&#x27;+labels[type]+&#x27;。&#x27;);return true;
+  window.WakukuWalk.room=tag;window.WakukuDaily={type,tag,stage:&#x27;approach&#x27;,clock:0,blend:0,heading,seat,center,target,begin,finish};cancel.textContent=type===&#x27;bed&#x27;?&#x27;起床&#x27;:type===&#x27;swing&#x27;?&#x27;离开秋千&#x27;:&#x27;结束活动&#x27;;cancel.hidden=false;toast(&#x27;苔苔走过去&#x27;+labels[type]+&#x27;。&#x27;);return true;
  };
  document.querySelector(&#x27;[aria-label=&quot;给小植物浇水&quot;]&#x27;)?.addEventListener(&#x27;click&#x27;,e=&gt;{e.stopImmediatePropagation();window.WakukuDailyRequest(&#x27;绿植&#x27;,{x:-.62,y:.3,z:-.95},()=&gt;{},()=&gt;{});},true);
  const swing=window.WakukuSwing={angle:0,velocity:0,lastPush:-Infinity};
- const push=document.createElement(&#x27;button&#x27;);push.textContent=&#x27;轻推秋千&#x27;;push.hidden=true;push.style.cssText=&#x27;position:absolute;left:37%;top:74%;z-index:20;border:1px solid #d5b996;border-radius:20px;background:#fff3d8;color:#775e43;padding:11px 14px&#x27;;document.body.append(push);
+ const push=document.createElement(&#x27;button&#x27;);push.textContent=&#x27;轻推秋千&#x27;;push.hidden=true;push.style.cssText=&#x27;position:absolute;left:37%;top:74%;z-index:20;border:1px solid #d5b996;border-radius:20px;background:#fff3d8;color:#775e43;padding:11px 14px&#x27;;/* Swing mesh itself is the push target; no extra screen button. */
  window.WakukuPushSwing=()=&gt;{const a=window.WakukuDaily,now=performance.now();if(a?.type!==&#x27;swing&#x27;||a.stage!==&#x27;perform&#x27;||now-swing.lastPush&lt;350)return false;swing.lastPush=now;const direction=Math.abs(swing.velocity)&gt;.03?Math.sign(swing.velocity):swing.angle&gt;0?-1:1;swing.velocity=clamp(swing.velocity+direction*.48,-1.1,1.1);buzz(8);toast(&#x27;呼——再轻轻推一下。&#x27;);return true;};push.onclick=window.WakukuPushSwing;
- window.addEventListener(&#x27;wakuku:tap&#x27;,()=&gt;window.WakukuPushSwing());
+
  const beforeDailyUpdate=updatePolish;updatePolish=function(){beforeDailyUpdate();const a=window.WakukuDaily;if(!a)return;const w=window.WakukuWalk,h=Math.min(dt,.04);a.clock+=h;push.hidden=!(a.type===&#x27;swing&#x27;&amp;&amp;a.stage===&#x27;perform&#x27;);if(a.type===&#x27;swing&#x27;){swing.velocity+=(-4.5*swing.angle-.75*swing.velocity)*h;swing.angle=clamp(swing.angle+swing.velocity*h,-.34,.34);if(Math.abs(swing.angle)&gt;=.34)swing.velocity*=-.25;}
-  if((w.manual||(w.moving&amp;&amp;a.stage===&#x27;perform&#x27;)||pet.foodDrag||pet.feedPhase||ballBusy()||paused)&amp;&amp;a.stage!==&#x27;exit&#x27;)endDaily();
+  if(a.type!==&#x27;swing&#x27;&amp;&amp;(w.manual||(w.moving&amp;&amp;a.stage===&#x27;perform&#x27;)||pet.foodDrag||pet.feedPhase||ballBusy()||paused)&amp;&amp;a.stage!==&#x27;exit&#x27;)endDaily();
   if(a.stage===&#x27;approach&#x27;){
    if(!w.moving&amp;&amp;!w.path.length&amp;&amp;Math.hypot(w.target-fetcher.x,w.targetZ-w.z)&lt;1){if(Math.hypot(fetcher.x/341.333-a.target[0],w.z/341.333-a.target[1])&gt;.12){endDaily();return;}a.stage=&#x27;enter&#x27;;a.clock=0;a.origin=[fetcher.x/341.333,w.z/341.333];}
   }else{
@@ -1778,7 +1784,7 @@ window.installTripoFurniture=function(THREE,GLTFLoader,room){
   }
   document.body.dataset.dailyAction=a.type;document.body.dataset.dailyStage=window.WakukuDaily?.stage||&#x27;idle&#x27;;
  };
- window.addEventListener(&#x27;blur&#x27;,endDaily);document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidden)endDaily();});
+ window.addEventListener(&#x27;blur&#x27;,()=&gt;{if(window.WakukuDaily?.type!==&#x27;swing&#x27;)endDaily();});document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidden&amp;&amp;window.WakukuDaily?.type!==&#x27;swing&#x27;)endDaily();});
  let lastSound=0;
  window.addEventListener(&#x27;wakuku:house-action&#x27;,e=&gt;{const d=e.detail;document.body.dataset.lastObject=d.tag;document.body.dataset.objectActive=String(d.active);
   if(d.legacy){document.querySelector(&#x27;[aria-label=&quot;&#x27;+d.legacy+&#x27;&quot;]&#x27;)?.click();return;}
@@ -2019,7 +2025,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
         const seated=[&#x27;sit&#x27;,&#x27;tv&#x27;,&#x27;swing&#x27;].includes(daily.type);
         if(seated){
           pivot.updateMatrixWorld(true);const hipY=bone(&#x27;Hips&#x27;).getWorldPosition(new THREE.Vector3()).y;
-          pivot.position.y+=(.40-hipY)*b;
+          pivot.position.y+=((daily.type===&#x27;swing&#x27;?.46:.40)-hipY)*b;
           pivot.position.x+=(daily.seat[0]-daily.origin[0])*b;pivot.position.z+=(daily.seat[1]-daily.origin[1])*b;
           rotate(&#x27;LeftUpLeg&#x27;,-1.35*b);rotate(&#x27;RightUpLeg&#x27;,-1.35*b);rotate(&#x27;LeftLeg&#x27;,1.25*b);rotate(&#x27;RightLeg&#x27;,1.25*b);
           rotate(&#x27;Spine&#x27;,-.07*b);rotate(&#x27;Head&#x27;,.02*b,Math.sin(now*.0008)*.035*b);
@@ -2033,7 +2039,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
         for(const side of [&#x27;Left&#x27;,&#x27;Right&#x27;]){
           const sign=side===&#x27;Left&#x27;?1:-1;
           const petTarget=[&#x27;cat&#x27;,&#x27;dog&#x27;].includes(daily.type)?window.WakukuPets.get(daily.type):null;
-          const target=petTarget?new THREE.Vector3(petTarget.x+sign*.04,.30+Math.sin(now*.004)*.012,petTarget.z):daily.type===&#x27;blocks&#x27;?new THREE.Vector3(-.45+Math.sin(daily.clock*Math.PI)*.08,.13+Math.max(0,Math.sin(daily.clock*Math.PI))*.20,1.85):seated?localTarget(sign*.10,.24,.14):daily.type===&#x27;wash&#x27;?localTarget(sign*(.025+pulse),.34,.20):localTarget(sign*.05,.32,.21);
+          const target=daily.type===&#x27;swing&#x27;?localTarget(sign*.18,.37,.06):petTarget?new THREE.Vector3(petTarget.x+sign*.04,.30+Math.sin(now*.004)*.012,petTarget.z):daily.type===&#x27;blocks&#x27;?new THREE.Vector3(-.45+Math.sin(daily.clock*Math.PI)*.08,.13+Math.max(0,Math.sin(daily.clock*Math.PI))*.20,1.85):seated?localTarget(sign*.10,.24,.14):daily.type===&#x27;wash&#x27;?localTarget(sign*(.025+pulse),.34,.20):localTarget(sign*.05,.32,.21);
           const start=bone(side+&#x27;Hand&#x27;).getWorldPosition(new THREE.Vector3());solveArm(side,start.lerp(target,b));
         }
         if(daily.type===&#x27;blocks&#x27;){pivot.updateMatrixWorld(true);daily.hand=bone(&#x27;RightHand&#x27;).getWorldPosition(new THREE.Vector3());}
