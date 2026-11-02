@@ -861,21 +861,23 @@ drawPet=function(){
  // Game HUD is intentionally quiet; tools and the character occupy the scene.
  txt(&#x27;苔苔的小屋&#x27;,27,42,21,&#x27;#355245&#x27;,&#x27;left&#x27;,600);
  txt(&#x27;W A K U K U&#x27;,28,65,9,&#x27;#6f826b&#x27;,&#x27;left&#x27;,600);
- for(let i=0;i&lt;3;i++)heart(33+i*25,94,10,pet.actions[i]&gt;0?&#x27;#bf8778&#x27;:&#x27;#9cae8b55&#x27;);
- txt(pet.done?&#x27;今天一起笑了&#x27;:&#x27;今天的小心意&#x27;,113,92,10,&#x27;#76816b&#x27;);
+ 
+
  let sentence=pet.feedPhase===1?&#x27;啊呜——&#x27;:pet.feedPhase===2?&#x27;嚼嚼，甜甜的。&#x27;:pet.feedPhase===3?&#x27;谢谢你。&#x27;:pet.foodDrag?&#x27;再靠近一点点。&#x27;:(ballBusy()||toy.phase===&#x27;offer&#x27;)?fetchCaption():fetcher.comfort&gt;0?&#x27;嗯……好舒服。&#x27;:&#x27;今天，也陪我玩一会儿吧。&#x27;;
  if(statusTime&gt;0&amp;&amp;statusText.length&lt;27)sentence=/梳顺|整洁/.test(statusText)?&#x27;梳顺啦，好舒服。&#x27;:statusText;
  if(window.WakukuCareCaption?.until&gt;performance.now())sentence=window.WakukuCareCaption.text;
- const bubbleW=Math.min(370,Math.max(170,sentence.length*12+36));rr(216-bubbleW/2,137,bubbleW,43,20,&#x27;#fffaf0ed&#x27;);
+ if(!window.WakukuChatOpen&amp;&amp;(pet.feedPhase||pet.foodDrag||ballBusy()||fetcher.comfort&gt;0||statusTime&gt;0||window.WakukuCareCaption?.until&gt;performance.now())){const bubbleW=Math.min(370,Math.max(170,sentence.length*12+36));rr(216-bubbleW/2,137,bubbleW,43,20,&#x27;#fffaf0ed&#x27;);
  ctx.beginPath();ctx.moveTo(202,177);ctx.lineTo(216,191);ctx.lineTo(226,177);ctx.fillStyle=&#x27;#fffaf0ed&#x27;;ctx.fill();txt(sentence,216,158,12,&#x27;#52664e&#x27;,&#x27;center&#x27;);
+ }
  drawDoll();if(!window.WakukuHouseOverview)drawToy();
  if(pet.feedPhase===1){let k=clamp((pet.feedClock-.12)/.38,0,1);withCareForeground(()=&gt;berry(pet.feedFrom.x+(doll.mouth.x-pet.feedFrom.x)*k,pet.feedFrom.y+(doll.mouth.y-pet.feedFrom.y)*k,1-k*.88));}
  // A wooden care tray in the room, not a row of web buttons.
- ellipse(216,727,190,13,&#x27;#88755020&#x27;);rr(24,640,384,87,25,&#x27;#bb9b71&#x27;);rr(24,632,384,87,25,&#x27;#d4b98d&#x27;);
+ if(!window.WakukuChatOpen){ellipse(216,727,190,13,&#x27;#88755020&#x27;);rr(24,640,384,87,25,&#x27;#bb9b71&#x27;);rr(24,632,384,87,25,&#x27;#d4b98d&#x27;);
  for(let i=0;i&lt;3;i++){const x=91+i*124;ellipse(x,672,46,31,&#x27;#ba9e752a&#x27;);ellipse(x,666,42,30,pet.tool===i?&#x27;#f4e7c5&#x27;:&#x27;#e4cda5&#x27;);}
  berry(84,665,.8);berry(100,671,.7);careBrush14(216,662,.88,.35);smallBall14(340,665);
  txt(&#x27;莓果&#x27;,91,704,12,&#x27;#735f43&#x27;,&#x27;center&#x27;,600);txt(&#x27;梳子&#x27;,216,704,12,&#x27;#735f43&#x27;,&#x27;center&#x27;,600);txt(&#x27;小球&#x27;,340,704,12,&#x27;#735f43&#x27;,&#x27;center&#x27;,600);
  txt(pet.tool===0?&#x27;点莓果喂食 · 也可拖到嘴边&#x27;:pet.tool===1?&#x27;在衣服上轻轻来回梳&#x27;:&#x27;点地上的球 · 拖动后甩出去&#x27;,216,747,12,&#x27;#7e735d&#x27;,&#x27;center&#x27;);
+ }
  if(pet.foodDrag)withCareForeground(()=&gt;berry(pet.foodDrag.x,pet.foodDrag.y));
  if(doll.brush&amp;&amp;pointer)withCareForeground(()=&gt;careBrush14(doll.brush.x,doll.brush.y,.9,-.4));
 };
@@ -1408,7 +1410,7 @@ window.createHouseInteractions=function(THREE,group){
   e.effects=new THREE.Group();group.add(e.effects);e.effects.visible=false;e.drops=[];
   for(let i=0;i&lt;9;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.009,6,4),/水槽|洗手台|淋浴|植物|绿植|马桶/.test(e.tag)?waterMat:sparkMat);e.effects.add(m);e.drops.push(m);}
   if(!immobile.has(e.tag)){
-   const b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.setAttribute(&#x27;aria-label&#x27;,&#x27;互动：&#x27;+e.tag);b.textContent=({&#x27;沙发&#x27;:&#x27;坐沙发&#x27;,&#x27;电视&#x27;:&#x27;看电视&#x27;,&#x27;绿植&#x27;:&#x27;给绿植浇水&#x27;,&#x27;阳台植物&#x27;:&#x27;给阳台花草浇水&#x27;,&#x27;洗手台&#x27;:&#x27;洗手&#x27;,&#x27;厨房水槽&#x27;:&#x27;厨房洗手&#x27;})[e.tag]||e.tag;b.style.cssText=&#x27;position:static;min-height:38px;border:1px solid #d8c5a2;border-radius:12px;background:#fff8e8;color:#6f5c40;padding:7px 12px;font-size:12px;box-shadow:none;touch-action:manipulation&#x27;;b.hidden=true;b.onclick=()=&gt;{if(activate(e))window.WakukuCloseObjectList?.();};document.querySelector(&#x27;#house-object-list&#x27;)?.append(b);e.button=b;
+   const b=document.createElement(&#x27;button&#x27;);b.type=&#x27;button&#x27;;b.setAttribute(&#x27;aria-label&#x27;,&#x27;互动：&#x27;+e.tag);b.textContent=({&#x27;沙发&#x27;:&#x27;坐沙发&#x27;,&#x27;电视&#x27;:&#x27;看电视&#x27;,&#x27;绿植&#x27;:&#x27;给绿植浇水&#x27;,&#x27;阳台植物&#x27;:&#x27;给阳台花草浇水&#x27;,&#x27;洗手台&#x27;:&#x27;洗手&#x27;,&#x27;厨房水槽&#x27;:&#x27;厨房洗手&#x27;,&#x27;床与枕头&#x27;:&#x27;上床睡觉&#x27;})[e.tag]||e.tag;b.style.cssText=&#x27;position:static;min-height:38px;border:1px solid #d8c5a2;border-radius:12px;background:#fff8e8;color:#6f5c40;padding:7px 12px;font-size:12px;box-shadow:none;touch-action:manipulation&#x27;;b.hidden=true;b.onclick=()=&gt;{if(activate(e))window.WakukuCloseObjectList?.();};document.querySelector(&#x27;#house-object-list&#x27;)?.append(b);e.button=b;
   }
  }
  const offText={&#x27;厨房柜门&#x27;:&#x27;柜门关好啦。&#x27;,&#x27;抽屉柜&#x27;:&#x27;抽屉收好啦。&#x27;,&#x27;冰箱&#x27;:&#x27;冰箱门关好啦。&#x27;,&#x27;厨房水槽&#x27;:&#x27;水龙头关上啦。&#x27;,&#x27;洗手台&#x27;:&#x27;水龙头关好啦。&#x27;,&#x27;淋浴&#x27;:&#x27;小水滴停下来啦。&#x27;,&#x27;灶台&#x27;:&#x27;炉子关好啦。&#x27;,&#x27;床与枕头&#x27;:&#x27;休息好了，再一起玩吧。&#x27;,&#x27;书柜&#x27;:&#x27;把书轻轻放回去。&#x27;,&#x27;灯串&#x27;:&#x27;星星灯恢复啦。&#x27;};
@@ -1416,7 +1418,7 @@ window.createHouseInteractions=function(THREE,group){
   if(/灶台|灯串/.test(e.tag))for(const p of e.parts){if(!p.ownMaterial){p.m.material=p.m.material.clone();p.ownMaterial=true;}p.m.material.emissive?.set(e.active?&#x27;#e9a14d&#x27;:&#x27;#000000&#x27;);p.m.material.emissiveIntensity=e.active?.65:0;}
   window.dispatchEvent(new CustomEvent(&#x27;wakuku:house-action&#x27;,{detail:{tag:e.tag,key:e.key,active:e.active,text:(!e.active&amp;&amp;offText[e.tag])||notes[e.tag]||&#x27;轻轻碰一下，它回应啦。&#x27;,legacy:legacy[e.tag]}}));return true;
  }
- return {dispose(){for(const e of entries.values()){e.button?.remove();group.remove(e.effects);for(const d of e.drops)d.geometry.dispose();}waterMat.dispose();sparkMat.dispose();},pick(camera,point,actor){group.updateMatrixWorld(true);ray.setFromCamera(point,camera);const hits=ray.intersectObjects(group.children,false).filter(h=&gt;h.object.visible&amp;&amp;h.object.material.opacity&gt;.12&amp;&amp;h.object.userData.interaction);if(!hits.length)return false;const doll=ray.intersectObject(actor,true)[0];if(doll&amp;&amp;doll.distance&lt;hits[0].distance)return false;return activate(hits[0].object.userData.interaction);},project(camera){for(const e of entries.values()){if(!e.button)continue;const v=e.center.clone().project(camera);e.button.hidden=![&#x27;沙发&#x27;,&#x27;电视&#x27;,&#x27;绿植&#x27;,&#x27;阳台植物&#x27;,&#x27;洗手台&#x27;,&#x27;厨房水槽&#x27;,&#x27;阳台秋千&#x27;,&#x27;积木&#x27;].includes(e.tag)&amp;&amp;(window.WakukuHouseOverview||v.x&lt;-.95||v.x&gt;.95||v.y&lt;-.85||v.y&gt;.95||v.z&lt; -1||v.z&gt;1);}},update(time){const dt=Math.min(.05,Math.max(0,time-last));last=time;clock=time;
+ return {dispose(){for(const e of entries.values()){e.button?.remove();group.remove(e.effects);for(const d of e.drops)d.geometry.dispose();}waterMat.dispose();sparkMat.dispose();},pick(camera,point,actor){group.updateMatrixWorld(true);ray.setFromCamera(point,camera);const hits=ray.intersectObjects(group.children,false).filter(h=&gt;h.object.visible&amp;&amp;h.object.material.opacity&gt;.12&amp;&amp;h.object.userData.interaction);if(!hits.length)return false;const doll=ray.intersectObject(actor,true)[0];if(doll&amp;&amp;doll.distance&lt;hits[0].distance)return false;return activate(hits[0].object.userData.interaction);},project(camera){for(const e of entries.values()){if(!e.button)continue;const v=e.center.clone().project(camera);e.button.hidden=![&#x27;沙发&#x27;,&#x27;电视&#x27;,&#x27;绿植&#x27;,&#x27;阳台植物&#x27;,&#x27;洗手台&#x27;,&#x27;厨房水槽&#x27;,&#x27;阳台秋千&#x27;,&#x27;积木&#x27;,&#x27;床与枕头&#x27;].includes(e.tag)&amp;&amp;(window.WakukuHouseOverview||v.x&lt;-.95||v.x&gt;.95||v.y&lt;-.85||v.y&gt;.95||v.z&lt; -1||v.z&gt;1);}},update(time){const dt=Math.min(.05,Math.max(0,time-last));last=time;clock=time;
   for(const e of entries.values()){e.age+=dt;e.open+=((e.active?1:0)-e.open)*(1-Math.exp(-dt*9));const bounce=e.age&lt;1.4?Math.sin(e.age*11)*Math.exp(-e.age*3):0;
    for(const p of e.parts){if(immobile.has(e.tag)||[&#x27;台灯&#x27;,&#x27;圆窗&#x27;,&#x27;音乐盒&#x27;,&#x27;风铃&#x27;,&#x27;灯串&#x27;].includes(e.tag))continue;const m=p.m;
     m.position.copy(p.p);m.rotation.copy(p.r);m.scale.copy(p.s);
@@ -1428,7 +1430,7 @@ window.createHouseInteractions=function(THREE,group){
     else if(e.tag===&#x27;床与枕头&#x27;){if(m.geometry.type===&#x27;SphereGeometry&#x27;)m.scale.y=p.s.y*(1+bounce*.16);}
     else if(e.tag===&#x27;马桶&#x27;){if(m.geometry.type===&#x27;CylinderGeometry&#x27;){m.rotation.x=-e.open*.9;m.position.y+=e.open*.06;}}
     else if(e.tag===&#x27;书柜&#x27;){if(m.geometry.type===&#x27;BoxGeometry&#x27;&amp;&amp;m.geometry.parameters.width&lt;.08)m.position.z+=e.open*.08;}
-    else if(![&#x27;沙发&#x27;,&#x27;电视&#x27;,&#x27;阳台植物&#x27;,&#x27;绿植&#x27;,&#x27;厨房水槽&#x27;,&#x27;洗手台&#x27;,&#x27;淋浴&#x27;,&#x27;灶台&#x27;,&#x27;阳台秋千&#x27;,&#x27;积木&#x27;].includes(e.tag)){m.position.y+=bounce*.018;m.rotation.z+=bounce*.025;}
+    else if(![&#x27;沙发&#x27;,&#x27;电视&#x27;,&#x27;阳台植物&#x27;,&#x27;绿植&#x27;,&#x27;厨房水槽&#x27;,&#x27;洗手台&#x27;,&#x27;淋浴&#x27;,&#x27;灶台&#x27;,&#x27;阳台秋千&#x27;,&#x27;积木&#x27;,&#x27;床与枕头&#x27;].includes(e.tag)){m.position.y+=bounce*.018;m.rotation.z+=bounce*.025;}
    }
    if(e.tag===&#x27;电视&#x27;)for(const p of e.parts){if(p.m.geometry.parameters.width&lt;.02){p.m.material.emissiveIntensity=window.WakukuDaily?.type===&#x27;tv&#x27;&amp;&amp;window.WakukuDaily?.stage===&#x27;perform&#x27;?.55+.15*Math.sin(clock*2):0;}}
    const watering=/水槽|洗手台|淋浴|植物|绿植|马桶/.test(e.tag),running=watering?e.active&amp;&amp;e.age&lt;4:e.age&lt;1.2;e.effects.visible=running;
@@ -1672,10 +1674,10 @@ window.installTripoFurniture=function(THREE,GLTFLoader,room){
  window.addEventListener(&#x27;pointermove&#x27;,e=&gt;{const g=gestures.get(e.pointerId);if(g&amp;&amp;Math.hypot(e.clientX-g.x,e.clientY-g.y)&gt;7)g.moved=true;},true);
  window.addEventListener(&#x27;pointerup&#x27;,e=&gt;{const g=gestures.get(e.pointerId);gestures.delete(e.pointerId);if(!g||g.moved||performance.now()-g.time&gt;650||pet.tool===1||!window.WakukuHouseCanInteract())return;window.WakukuDoll?.interactRoom?.(inputPoint(e));},true);
  window.addEventListener(&#x27;pointercancel&#x27;,e=&gt;gestures.delete(e.pointerId));window.addEventListener(&#x27;blur&#x27;,()=&gt;gestures.clear());
- const dailyTypes={&#x27;沙发&#x27;:&#x27;sit&#x27;,&#x27;电视&#x27;:&#x27;tv&#x27;,&#x27;绿植&#x27;:&#x27;water&#x27;,&#x27;阳台植物&#x27;:&#x27;water&#x27;,&#x27;洗手台&#x27;:&#x27;wash&#x27;,&#x27;厨房水槽&#x27;:&#x27;wash&#x27;,&#x27;阳台秋千&#x27;:&#x27;swing&#x27;,&#x27;积木&#x27;:&#x27;blocks&#x27;};
- const labels={sit:&#x27;坐沙发&#x27;,tv:&#x27;看电视&#x27;,water:&#x27;浇花&#x27;,wash:&#x27;洗手&#x27;,swing:&#x27;坐秋千&#x27;,blocks:&#x27;搭积木&#x27;};
- const replies={sit:&#x27;软软的，坐一会儿真舒服。&#x27;,tv:&#x27;一起看一小会儿电视吧。&#x27;,water:&#x27;咕噜咕噜，小叶子也喝饱啦。&#x27;,wash:&#x27;搓搓手，手心手背都洗干净。&#x27;,swing:&#x27;坐稳啦，点我或秋千，轻轻推一下吧。&#x27;,blocks:&#x27;一块、两块，搭一座小塔。&#x27;};
- const cancel=document.createElement(&#x27;button&#x27;);cancel.textContent=&#x27;结束活动&#x27;;cancel.hidden=true;cancel.style.cssText=&#x27;position:absolute;right:5%;top:74%;z-index:20;border:0;border-radius:18px;background:#fff5dfdc;color:#756349;padding:10px 14px&#x27;;document.body.append(cancel);
+ const dailyTypes={&#x27;沙发&#x27;:&#x27;sit&#x27;,&#x27;电视&#x27;:&#x27;tv&#x27;,&#x27;绿植&#x27;:&#x27;water&#x27;,&#x27;阳台植物&#x27;:&#x27;water&#x27;,&#x27;洗手台&#x27;:&#x27;wash&#x27;,&#x27;厨房水槽&#x27;:&#x27;wash&#x27;,&#x27;阳台秋千&#x27;:&#x27;swing&#x27;,&#x27;积木&#x27;:&#x27;blocks&#x27;,&#x27;床与枕头&#x27;:&#x27;bed&#x27;};
+ const labels={sit:&#x27;坐沙发&#x27;,tv:&#x27;看电视&#x27;,water:&#x27;浇花&#x27;,wash:&#x27;洗手&#x27;,swing:&#x27;坐秋千&#x27;,blocks:&#x27;搭积木&#x27;,bed:&#x27;上床睡觉&#x27;};
+ const replies={sit:&#x27;软软的，坐一会儿真舒服。&#x27;,tv:&#x27;一起看一小会儿电视吧。&#x27;,water:&#x27;咕噜咕噜，小叶子也喝饱啦。&#x27;,wash:&#x27;搓搓手，手心手背都洗干净。&#x27;,swing:&#x27;坐稳啦，点我或秋千，轻轻推一下吧。&#x27;,blocks:&#x27;一块、两块，搭一座小塔。&#x27;,bed:&#x27;我眯一会儿，陪在我身边吧。&#x27;};
+ const cancel=document.createElement(&#x27;button&#x27;);cancel.id=&#x27;daily-end&#x27;;cancel.textContent=&#x27;结束活动&#x27;;cancel.hidden=true;cancel.style.cssText=&#x27;position:absolute;right:5%;top:74%;z-index:20;border:0;border-radius:18px;background:#fff5dfdc;color:#756349;padding:10px 14px&#x27;;document.body.append(cancel);
  function endDaily(){const a=window.WakukuDaily;if(a){a.stage=&#x27;exit&#x27;;a.clock=0;a.finish();}}
  cancel.onclick=endDaily;
  window.WakukuDailyRequest=(tag,center,begin,finish)=&gt;{
@@ -1685,12 +1687,13 @@ window.installTripoFurniture=function(THREE,GLTFLoader,room){
   let target,heading,seat=null;
   if(type===&#x27;sit&#x27;||type===&#x27;tv&#x27;){target=[-.4,-1.4];heading=type===&#x27;tv&#x27;?.85:0;seat=[0,-1.78];}
   else if(type===&#x27;swing&#x27;){target=[-2.55,.95];heading=0;seat=[-2.55,1.43];}
+  else if(type===&#x27;bed&#x27;){target=[1.85,-.78];heading=0;seat=[1.85,-1.30];}
   else if(type===&#x27;blocks&#x27;){target=[-.45,1.55];heading=0;}
   else if(tag===&#x27;洗手台&#x27;){target=[2.85,1.4];heading=Math.PI;}
   else if(tag===&#x27;厨房水槽&#x27;){target=[-2.27,-1.85];heading=Math.atan2(center.x-target[0],center.z-target[1]);}
   else{target=tag===&#x27;绿植&#x27;?[-.62,-.5]:[center.x&lt;-2.1?-2.45:center.x,center.x&lt;-2.1?2.1:1.83];heading=Math.atan2(center.x-target[0],center.z-target[1]);}
   if(!window.WakukuNavigateTo?.(...target)){toast(&#x27;这边暂时走不过去，先换个位置吧。&#x27;);return true;}
-  window.WakukuWalk.room=tag;window.WakukuDaily={type,tag,stage:&#x27;approach&#x27;,clock:0,blend:0,heading,seat,center,target,begin,finish};cancel.hidden=false;toast(&#x27;苔苔走过去&#x27;+labels[type]+&#x27;。&#x27;);return true;
+  window.WakukuWalk.room=tag;window.WakukuDaily={type,tag,stage:&#x27;approach&#x27;,clock:0,blend:0,heading,seat,center,target,begin,finish};cancel.textContent=type===&#x27;bed&#x27;?&#x27;起床&#x27;:&#x27;结束活动&#x27;;cancel.hidden=false;toast(&#x27;苔苔走过去&#x27;+labels[type]+&#x27;。&#x27;);return true;
  };
  document.querySelector(&#x27;[aria-label=&quot;给小植物浇水&quot;]&#x27;)?.addEventListener(&#x27;click&#x27;,e=&gt;{e.stopImmediatePropagation();window.WakukuDailyRequest(&#x27;绿植&#x27;,{x:-.62,y:.3,z:-.95},()=&gt;{},()=&gt;{});},true);
  const swing=window.WakukuSwing={angle:0,velocity:0,lastPush:-Infinity};
@@ -1702,10 +1705,10 @@ window.installTripoFurniture=function(THREE,GLTFLoader,room){
   if(a.stage===&#x27;approach&#x27;){
    if(!w.moving&amp;&amp;!w.path.length&amp;&amp;Math.hypot(w.target-fetcher.x,w.targetZ-w.z)&lt;1){if(Math.hypot(fetcher.x/341.333-a.target[0],w.z/341.333-a.target[1])&gt;.12){endDaily();return;}a.stage=&#x27;enter&#x27;;a.clock=0;a.origin=[fetcher.x/341.333,w.z/341.333];}
   }else{
-   const entering=a.stage!==&#x27;exit&#x27;;a.blend=clamp(a.blend+(entering?1:-1)*h/1.1,0,1);
+   const entering=a.stage!==&#x27;exit&#x27;;a.blend=clamp(a.blend+(entering?1:-1)*h/(a.type===&#x27;bed&#x27;?2.6:1.1),0,1);
    if(!w.manual){const delta=a.heading-w.heading;w.heading+=Math.atan2(Math.sin(delta),Math.cos(delta))*(1-Math.exp(-h*5));}
    if(a.stage===&#x27;enter&#x27;&amp;&amp;a.blend&gt;=1){a.stage=&#x27;perform&#x27;;a.clock=0;a.begin();toast(replies[a.type]);window.WakukuCareReply?.(replies[a.type]);}
-   if(a.stage===&#x27;perform&#x27;&amp;&amp;a.type!==&#x27;swing&#x27;&amp;&amp;a.clock&gt;(a.type===&#x27;tv&#x27;?12:a.type===&#x27;sit&#x27;?9:a.type===&#x27;blocks&#x27;?7:6))endDaily();
+   if(a.stage===&#x27;perform&#x27;&amp;&amp;![&#x27;swing&#x27;,&#x27;bed&#x27;].includes(a.type)&amp;&amp;a.clock&gt;(a.type===&#x27;tv&#x27;?12:a.type===&#x27;sit&#x27;?9:a.type===&#x27;blocks&#x27;?7:6))endDaily();
    if(a.stage===&#x27;exit&#x27;&amp;&amp;a.blend&lt;=0){a.finish();window.WakukuDaily=null;cancel.hidden=true;push.hidden=true;swing.angle=swing.velocity=0;toast(&#x27;好啦，再去做点什么？&#x27;);}
   }
   document.body.dataset.dailyAction=a.type;document.body.dataset.dailyStage=window.WakukuDaily?.stage||&#x27;idle&#x27;;
@@ -1719,6 +1722,7 @@ window.installTripoFurniture=function(THREE,GLTFLoader,room){
   if(d.tag===&#x27;阳台植物&#x27;)window.WakukuCareReply?.(&#x27;咕噜咕噜，小叶子也喝饱啦。&#x27;);
   if(!muted&amp;&amp;performance.now()-lastSound&gt;250){Feedback.fx(&#x27;select&#x27;);lastSound=performance.now();}buzz(6);
  });
+ napButton.onclick=()=&gt;{resume3D();window.WakukuDailyRequest(&#x27;床与枕头&#x27;,{x:1.85,z:-1.72},()=&gt;{},()=&gt;{});};
  const oldReset=reset;reset=function(...args){endDaily();window.WakukuDaily=null;cancel.hidden=true;push.hidden=true;swing.angle=swing.velocity=0;oldReset(...args);window.WakukuDoll?.resetGroundBall?.();};
 })();
 &lt;/script&gt;
@@ -1940,6 +1944,12 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
       const daily=window.WakukuDaily,b=daily?ease(daily.blend):0;
       can.visible=false;stepStool.visible=false;for(const drop of dailyDrops)drop.visible=false;
       if(daily&amp;&amp;b&gt;0){
+        if(daily.type===&#x27;bed&#x27;){
+          const climb=ease(Math.min(1,daily.blend/.55)),lie=ease((daily.blend-.45)/.55);
+          pivot.position.x+=(daily.seat[0]-daily.origin[0])*climb;pivot.position.z+=(daily.seat[1]-daily.origin[1])*climb;
+          pivot.position.y=.38*climb+.06*Math.sin(climb*Math.PI);pivot.rotation.x=-Math.PI/2*lie;
+          rotate(&#x27;LeftArm&#x27;,0,0,.10*b);rotate(&#x27;RightArm&#x27;,0,0,-.10*b);rotate(&#x27;Head&#x27;,.035*b);
+        }else{
         const seated=[&#x27;sit&#x27;,&#x27;tv&#x27;,&#x27;swing&#x27;].includes(daily.type);
         if(seated){
           pivot.updateMatrixWorld(true);const hipY=bone(&#x27;Hips&#x27;).getWorldPosition(new THREE.Vector3()).y;
@@ -1968,6 +1978,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
           const origin=daily.type===&#x27;water&#x27;?localTarget(0,.31,.36):localTarget(0,.38,.23);
           for(let i=0;i&lt;dailyDrops.length;i++){const d=dailyDrops[i],f=(now*.0018+i/14)%1;d.visible=true;d.position.copy(origin).add(new THREE.Vector3(Math.sin(i)*.018,-f*.20,Math.cos(i)*.015));d.scale.set(1,1.6,1);}
         }
+      }
       }
       pivot.updateMatrixWorld(true);
       const mood=window.WakukuExpression.sample(now,dt,{brushing:state.brushing,current,envelope,f,eating,daily,walking,phase,speaking:document.body.dataset.speech===&#x27;speaking&#x27;});
@@ -2006,7 +2017,7 @@ const {THREE,GLTFLoader,RoomEnvironment}=window.WAKUKU_RUNTIME;
   if(c.speaking||chat.mode===&#x27;speaking&#x27;){name=&#x27;speaking&#x27;;smile=.16;chew=Math.min(.22,Math.max(0,chat.level||window.WakukuVoiceLevel?.()||0)*.28);nod=Math.sin(t*1.7)*.009;}
   // Eating and sleeping take priority over social gestures.
   if(c.current===&#x27;eat&#x27;){name=&#x27;savouring&#x27;;smile=c.eating.smile*.62;squint=.08+blink*.4;chew=c.eating.chew;nod=tilt=0;}
-  if(c.current===&#x27;sleep&#x27;){name=&#x27;sleepy&#x27;;smile=.10;squint=.30;chew=0;nod=tilt=0;}
+  if(c.current===&#x27;sleep&#x27;||c.daily?.type===&#x27;bed&#x27;){name=&#x27;sleepy&#x27;;smile=.10;squint=.30;chew=0;nod=tilt=0;}
   return {name,weights:[smile,Math.min(.35,squint),Math.min(.65,chew)],nod,tilt,turn};
  }};
 })();
@@ -32043,12 +32054,13 @@ registerProcessor(&quot;scribeAudioProcessor@bd293b92cef79b80&quot;, ScribeAudio
 //# sourceMappingURL=lib.iife.js.map&lt;/script&gt;&lt;script&gt;/* Public agent ID only: no private service credentials belong in this file. */
 (()=&gt;{
  const state=window.WakukuChatState={mode:&#x27;idle&#x27;,level:0};let session=null,pending=null,generation=0,voice=false;
- const style=document.createElement(&#x27;style&#x27;);style.textContent=`#taitai-chat{position:absolute;z-index:50;left:4%;right:4%;bottom:2%;height:36%;padding:14px;background:#fff8ecef;border:1px solid #ddc8ab;border-radius:22px;box-shadow:0 8px 35px #58452f35;color:#6b5846;font:13px system-ui;box-sizing:border-box;display:flex;flex-direction:column;gap:9px}#taitai-chat[hidden]{display:none}#taitai-chat button{min-height:40px;border-radius:14px;border:1px solid #dcc5a7;background:#f4e3c9;color:#6b5846;padding:8px 12px;font:inherit}#taitai-chat-log{flex:1;overflow:auto;white-space:pre-wrap;user-select:text}#taitai-chat-log p{margin:7px 0;padding:8px;border-radius:12px;background:#f5ead8}#taitai-chat input{min-width:0;flex:1;border:1px solid #dbc5a9;border-radius:12px;padding:10px;font:inherit;background:#fffdf7}#taitai-chat small{font-size:10px;line-height:1.4}#taitai-chat form{display:flex;gap:6px}`;document.head.append(style);
+ const style=document.createElement(&#x27;style&#x27;);style.textContent=`#taitai-chat{position:absolute;z-index:50;left:4%;right:4%;bottom:2%;height:172px;max-height:35%;padding:10px;background:#fff8ecef;border:1px solid #ddc8ab;border-radius:22px;box-shadow:0 8px 35px #58452f35;color:#6b5846;font:13px system-ui;box-sizing:border-box;display:flex;flex-direction:column;gap:5px}#taitai-chat[hidden]{display:none}#taitai-chat button{min-height:40px;border-radius:14px;border:1px solid #dcc5a7;background:#f4e3c9;color:#6b5846;padding:8px 12px;font:inherit}#taitai-chat-log{flex:1;min-height:24px;overflow:auto;white-space:pre-wrap;user-select:text}#taitai-chat-log p{margin:3px 0;padding:4px;border-radius:12px;background:#f5ead8}#taitai-chat input{min-width:0;flex:1;border:1px solid #dbc5a9;border-radius:12px;padding:10px;font:inherit;background:#fffdf7}#taitai-chat small{font-size:10px;line-height:1.4}#taitai-chat form{display:flex;gap:6px}`;document.head.append(style);
  const open=document.createElement(&#x27;button&#x27;);open.textContent=&#x27;聊聊天&#x27;;open.setAttribute(&#x27;aria-label&#x27;,&#x27;和苔苔聊天&#x27;);open.style.cssText=&#x27;position:absolute;right:5%;top:20%;z-index:18;border:1px solid #ddc5a5;border-radius:18px;background:#fff1d9dd;color:#786047;padding:9px 12px&#x27;;document.body.append(open);
- const panel=document.createElement(&#x27;section&#x27;);panel.id=&#x27;taitai-chat&#x27;;panel.hidden=true;panel.setAttribute(&#x27;aria-label&#x27;,&#x27;和苔苔谈心&#x27;);panel.innerHTML=&#x27;&lt;header style=&quot;display:flex;align-items:center;justify-content:space-between&quot;&gt;&lt;strong&gt;和苔苔聊聊&lt;/strong&gt;&lt;button type=&quot;button&quot; aria-label=&quot;关闭聊天&quot;&gt;收起&lt;/button&gt;&lt;/header&gt;&lt;small&gt;AI 苔苔 · 聊天由 ElevenLabs 处理并可能保存，请勿输入隐私。点击语音才会请求麦克风；收起即结束通话。&lt;/small&gt;&lt;div id=&quot;taitai-chat-log&quot; role=&quot;log&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;&lt;div style=&quot;display:flex;gap:8px;align-items:center&quot;&gt;&lt;button type=&quot;button&quot; id=&quot;taitai-mic&quot;&gt;开始语音&lt;/button&gt;&lt;span id=&quot;taitai-chat-status&quot; role=&quot;status&quot;&gt;可以打字，也可以说话&lt;/span&gt;&lt;/div&gt;&lt;form&gt;&lt;input aria-label=&quot;想对苔苔说的话&quot; placeholder=&quot;今天想聊些什么？&quot; maxlength=&quot;1000&quot;&gt;&lt;button type=&quot;submit&quot;&gt;发送&lt;/button&gt;&lt;/form&gt;&#x27;;document.body.append(panel);
+ const panel=document.createElement(&#x27;section&#x27;);panel.id=&#x27;taitai-chat&#x27;;panel.hidden=true;panel.setAttribute(&#x27;aria-label&#x27;,&#x27;和苔苔谈心&#x27;);panel.innerHTML=&#x27;&lt;header style=&quot;display:flex;align-items:center;justify-content:space-between&quot;&gt;&lt;button type=&quot;button&quot; id=&quot;chat-history&quot;&gt;聊天记录&lt;/button&gt;&lt;button type=&quot;button&quot; aria-label=&quot;关闭聊天&quot;&gt;收起&lt;/button&gt;&lt;/header&gt;&lt;details&gt;&lt;summary style=&quot;font-size:10px&quot;&gt;聊天与隐私说明&lt;/summary&gt;&lt;small&gt;AI 苔苔 · 聊天由 ElevenLabs 处理并可能保存，请勿输入隐私。点击语音才会请求麦克风；收起即结束通话。&lt;/small&gt;&lt;/details&gt;&lt;div id=&quot;taitai-chat-log&quot; role=&quot;log&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;&lt;div style=&quot;display:flex;gap:8px;align-items:center&quot;&gt;&lt;button type=&quot;button&quot; id=&quot;taitai-mic&quot;&gt;开始语音&lt;/button&gt;&lt;span id=&quot;taitai-chat-status&quot; role=&quot;status&quot;&gt;可以打字，也可以说话&lt;/span&gt;&lt;/div&gt;&lt;form&gt;&lt;input aria-label=&quot;想对苔苔说的话&quot; placeholder=&quot;今天想聊些什么？&quot; maxlength=&quot;1000&quot;&gt;&lt;button type=&quot;submit&quot;&gt;发送&lt;/button&gt;&lt;/form&gt;&#x27;;document.body.append(panel);
+ const extra=document.createElement(&#x27;style&#x27;);extra.textContent=&#x27;#taitai-chat header{height:26px}#taitai-chat header button{min-height:24px;padding:2px 8px;border:0;background:transparent}#taitai-chat.history{height:42%;max-height:42%}#taitai-chat.voice-minimal{height:58px}#taitai-chat.voice-minimal header,#taitai-chat.voice-minimal details,#taitai-chat.voice-minimal form,#taitai-chat.voice-minimal #taitai-chat-log{display:none}#taitai-chat details[open]{position:absolute;bottom:100%;left:0;right:0;padding:12px;background:#fff9ec;border-radius:14px}&#x27;;document.head.append(extra);panel.querySelector(&#x27;#chat-history&#x27;).onclick=()=&gt;panel.classList.toggle(&#x27;history&#x27;);
  const log=panel.querySelector(&#x27;[role=log]&#x27;),input=panel.querySelector(&#x27;input&#x27;),status=panel.querySelector(&#x27;[role=status]&#x27;),mic=panel.querySelector(&#x27;#taitai-mic&#x27;),send=panel.querySelector(&#x27;[type=submit]&#x27;);
  function add(who,text){const p=document.createElement(&#x27;p&#x27;);p.textContent=who+&#x27;：&#x27;+text;log.append(p);while(log.children.length&gt;60)log.firstChild.remove();log.scrollTop=log.scrollHeight;}
- async function stop(){generation++;const old=session;session=null;pending=null;voice=false;state.mode=&#x27;idle&#x27;;state.level=0;mic.textContent=&#x27;开始语音&#x27;;status.textContent=&#x27;本次聊天已结束&#x27;;if(old)await old.endSession().catch(()=&gt;{});}
+ async function stop(){generation++;const old=session;session=null;pending=null;voice=false;state.mode=&#x27;idle&#x27;;state.level=0;panel.classList.remove(&#x27;voice-minimal&#x27;);mic.textContent=&#x27;开始语音&#x27;;status.textContent=&#x27;本次聊天已结束&#x27;;if(old)await old.endSession().catch(()=&gt;{});}
  async function start(useVoice){if(session&amp;&amp;voice===useVoice)return session;if(pending)return pending;if(session)await stop();const token=++generation;voice=useVoice;status.textContent=&#x27;正在连接苔苔…&#x27;;state.mode=&#x27;thinking&#x27;;window.WakukuStopVoice?.();
   pending=ElevenLabsClient.Conversation.startSession({agentId:&#x27;agent_7601m6dn5nbwfgws9x9zc0emxqm4&#x27;,connectionType:&#x27;websocket&#x27;,textOnly:!useVoice,
    onMessage:m=&gt;{if(token!==generation)return;add(m.source===&#x27;user&#x27;?&#x27;你&#x27;:&#x27;苔苔&#x27;,m.message);if(m.source!==&#x27;user&#x27;){state.mode=useVoice?&#x27;speaking&#x27;:&#x27;idle&#x27;;status.textContent=useVoice?&#x27;苔苔在说话&#x27;:&#x27;可以继续聊&#x27;;}},
@@ -32057,8 +32069,8 @@ registerProcessor(&quot;scribeAudioProcessor@bd293b92cef79b80&quot;, ScribeAudio
    onError:()=&gt;{if(token!==generation)return;status.textContent=&#x27;连接暂时不可用，请稍后重试&#x27;;state.mode=&#x27;idle&#x27;;}
   }).then(async s=&gt;{if(token!==generation){await s.endSession();throw new Error(&#x27;cancelled&#x27;);}session=s;pending=null;mic.textContent=useVoice?&#x27;结束语音&#x27;:&#x27;开始语音&#x27;;status.textContent=useVoice?&#x27;我在听呢&#x27;:&#x27;已连接，可以聊啦&#x27;;return s;}).catch(e=&gt;{if(token===generation){pending=null;session=null;state.mode=&#x27;idle&#x27;;status.textContent=useVoice?&#x27;语音未连上，请检查麦克风权限或改用打字&#x27;:&#x27;聊天暂时不可用，请检查网络后重试&#x27;;}throw e;});return pending;
  }
- open.onclick=()=&gt;{panel.hidden=false;input.focus();};panel.querySelector(&#x27;[aria-label=&quot;关闭聊天&quot;]&#x27;).onclick=()=&gt;{panel.hidden=true;stop();};
- mic.onclick=async()=&gt;{mic.disabled=true;try{if(session&amp;&amp;voice)await stop();else{if(session)add(&#x27;提示&#x27;,&#x27;切换为语音将开始一次新对话。&#x27;);await start(true);}}catch{}finally{mic.disabled=false;}};
+ open.onclick=()=&gt;{panel.hidden=false;window.WakukuChatOpen=true;document.body.classList.add(&#x27;chat-open&#x27;);panel.classList.remove(&#x27;voice-minimal&#x27;);};panel.querySelector(&#x27;[aria-label=&quot;关闭聊天&quot;]&#x27;).onclick=()=&gt;{panel.hidden=true;window.WakukuChatOpen=false;document.body.classList.remove(&#x27;chat-open&#x27;);stop();};
+ mic.onclick=async()=&gt;{mic.disabled=true;try{if(session&amp;&amp;voice)await stop();else{if(session)add(&#x27;提示&#x27;,&#x27;切换为语音将开始一次新对话。&#x27;);await start(true);panel.classList.add(&#x27;voice-minimal&#x27;);}}catch{}finally{mic.disabled=false;}};
  panel.querySelector(&#x27;form&#x27;).onsubmit=async e=&gt;{e.preventDefault();const text=input.value.trim();if(!text)return;send.disabled=true;try{const s=await start(voice&amp;&amp;!!session);s.sendUserMessage(text);add(&#x27;你&#x27;,text);input.value=&#x27;&#x27;;state.mode=&#x27;thinking&#x27;;status.textContent=&#x27;苔苔想一想…&#x27;;}catch{}finally{send.disabled=false;}};
  input.addEventListener(&#x27;input&#x27;,()=&gt;session?.sendUserActivity());
  // Input stays local until Send or Start voice. Closing releases the microphone.
@@ -32066,7 +32078,18 @@ registerProcessor(&quot;scribeAudioProcessor@bd293b92cef79b80&quot;, ScribeAudio
  setInterval(()=&gt;{state.level=session&amp;&amp;voice&amp;&amp;state.mode===&#x27;speaking&#x27;?session.getOutputVolume():0;},80);
 })();
 &lt;/script&gt;
-&lt;script&gt;// This delivery exposes only the commissioned feeding companion experience.
+&lt;script&gt;/* One compact utility row. The room owns the screen; controls open on demand. */
+(()=&gt;{
+ const nav=document.querySelector(&#x27;[aria-label=&quot;小屋地图&quot;]&#x27;),objects=document.querySelector(&#x27;[aria-label=&quot;打开物件列表&quot;]&#x27;),chat=document.querySelector(&#x27;[aria-label=&quot;和苔苔聊天&quot;]&#x27;);
+ const css=document.createElement(&#x27;style&#x27;);css.textContent=`[aria-label=&quot;小屋地图&quot;]{top:10%!important;left:5%!important;width:90%!important;flex-wrap:wrap;background:#fff8ecef;padding:10px;box-sizing:border-box;border-radius:18px}[aria-label=&quot;小屋地图&quot;][hidden]{display:none!important}.cozy-voice{position:static!important;width:100%;margin:4px 0}#room-menu,[aria-label=&quot;和苔苔聊天&quot;]{position:absolute!important;top:2.2%!important;min-height:44px!important;padding:8px 10px!important;border:1px solid #dac9ae!important;border-radius:50px!important;background:#fff9e7dd!important;color:#6e614c!important;font-size:12px!important;z-index:21!important}#room-menu{right:17%!important}[aria-label=&quot;和苔苔聊天&quot;]{right:33%!important}[aria-label=&quot;打开物件列表&quot;]{position:static!important;min-height:36px!important}[aria-label=&quot;自由行走摇杆，上下左右拖动&quot;]{opacity:.48;transition:opacity .2s}[aria-label=&quot;自由行走摇杆，上下左右拖动&quot;]:active{opacity:1}[aria-label=&quot;自由行走摇杆，上下左右拖动&quot;] span{display:none}body.chat-open #daily-end{top:auto!important;bottom:calc(172px + 4%)!important}body.chat-open [aria-label=&quot;自由行走摇杆，上下左右拖动&quot;],body.chat-open [aria-label=&quot;镜头回到正面&quot;]{visibility:hidden}`;document.head.append(css);
+ settingsControls.append(document.querySelector(&#x27;.cozy-voice&#x27;));
+ const menu=document.createElement(&#x27;button&#x27;);menu.id=&#x27;room-menu&#x27;;menu.textContent=&#x27;小屋&#x27;;menu.setAttribute(&#x27;aria-label&#x27;,&#x27;打开小屋菜单&#x27;);menu.setAttribute(&#x27;aria-expanded&#x27;,&#x27;false&#x27;);document.body.append(menu);nav.hidden=true;nav.append(objects);
+ function hide(){nav.hidden=true;menu.setAttribute(&#x27;aria-expanded&#x27;,&#x27;false&#x27;);}
+ menu.onclick=()=&gt;{const next=nav.hidden;window.WakukuCloseObjectList?.();nav.hidden=!next;menu.setAttribute(&#x27;aria-expanded&#x27;,String(next));};
+ nav.addEventListener(&#x27;click&#x27;,e=&gt;{if(e.target.closest(&#x27;button&#x27;))hide();});chat.addEventListener(&#x27;click&#x27;,()=&gt;{hide();window.WakukuCloseObjectList?.();});
+ document.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(!nav.contains(e.target)&amp;&amp;e.target!==menu)hide();},true);
+})();
+&lt;/script&gt;&lt;script&gt;// This delivery exposes only the commissioned feeding companion experience.
 const selectCareOnly=selectMode;
 selectMode=function(){selectCareOnly(&#x27;pet&#x27;);};
 if(mode!==&#x27;pet&#x27;)selectMode(&#x27;pet&#x27;);document.body.classList.add(&#x27;only-game&#x27;);
