@@ -1302,9 +1302,9 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
 })();
 &lt;/script&gt;&lt;script&gt;/* Continuous house navigation; room visits travel through the shared corridor. */
 (()=&gt;{
- const S=341.333,walk=window.WakukuWalk={target:0,targetZ:0,z:0,speed:0,weight:0,heading:0,idle:0,moving:false,marker:0,camera:0,cameraZ:0,homeX:0,path:[],room:&#x27;客厅&#x27;};
+ const S=341.333,walk=window.WakukuWalk={target:0,targetZ:0,z:0,speed:0,weight:0,heading:0,idle:0,moving:false,marker:0,camera:0,cameraZ:0,homeX:0,path:[],room:&#x27;客厅&#x27;,manual:false,inputX:0,inputZ:0};
  const rooms={&#x27;厨房&#x27;:[-1.85,-1.65],&#x27;卧室&#x27;:[1.85,-.88],&#x27;客厅&#x27;:[0,0],&#x27;阳台&#x27;:[-1.85,1.45],&#x27;洗手间&#x27;:[1.85,1.45]};
- function stop(){walk.path=[];walk.target=fetcher.x;walk.targetZ=walk.z;walk.speed=0;walk.moving=false;walk.idle=0;}
+ function stop(){walk.manual=false;walk.inputX=walk.inputZ=0;if(typeof knob!==&#x27;undefined&#x27;)knob.style.transform=&#x27;translate(-50%,-50%)&#x27;;walk.path=[];walk.target=fetcher.x;walk.targetZ=walk.z;walk.speed=0;walk.moving=false;walk.idle=0;}
  function available(){return !paused&amp;&amp;dollReady&amp;&amp;!pet.feedPhase&amp;&amp;!pet.foodDrag&amp;&amp;!ballBusy()&amp;&amp;toy.phase!==&#x27;offer&#x27;;}
  function visit(name){if(!available())return;window.WakukuHouseOverview=false;const [x,z]=rooms[name];stop();walk.room=name;
   // Doorways are centered at x ±1.85; first leave the current room through its doorway.
@@ -1318,12 +1318,33 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
  function stepTo(x){if(!available())return;window.WakukuHouseOverview=false;stop();const inRoom=Math.abs(walk.z)&gt;.5*S,side=fetcher.x&lt;0?-1:1;const a=inRoom?(side&lt;0?-2.8:1.1)*S:-2.8*S,b=inRoom?(side&lt;0?-1.1:2.8)*S:2.8*S;walk.target=clamp(x,a,b);walk.marker=2;}
  floor.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{e.preventDefault();e.stopPropagation();stepTo(inputPoint(e).x-215+walk.camera);});
  floor.addEventListener(&#x27;keydown&#x27;,e=&gt;{if([&#x27;ArrowLeft&#x27;,&#x27;ArrowRight&#x27;].includes(e.key)){e.preventDefault();stepTo(fetcher.x+(e.key===&#x27;ArrowLeft&#x27;?-100:100));}});
- document.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(e.target!==floor&amp;&amp;!nav.contains(e.target)){window.WakukuHouseOverview=false;stop();}},true);
+ const joy=document.createElement(&#x27;div&#x27;);joy.setAttribute(&#x27;role&#x27;,&#x27;slider&#x27;);joy.setAttribute(&#x27;aria-label&#x27;,&#x27;自由行走摇杆，上下左右拖动&#x27;);joy.setAttribute(&#x27;aria-valuemin&#x27;,&#x27;0&#x27;);joy.setAttribute(&#x27;aria-valuemax&#x27;,&#x27;100&#x27;);joy.setAttribute(&#x27;aria-valuenow&#x27;,&#x27;0&#x27;);joy.tabIndex=0;joy.style.cssText=&#x27;position:absolute;z-index:16;left:5%;top:65%;width:92px;height:92px;max-width:24%;aspect-ratio:1;border:1px solid #fffcdfb3;border-radius:50%;background:#faf0d74d;box-shadow:inset 0 0 18px #a68b5326;touch-action:none;user-select:none&#x27;;
+ const knob=document.createElement(&#x27;div&#x27;);knob.style.cssText=&#x27;position:absolute;left:50%;top:50%;width:34px;height:34px;border-radius:50%;background:#f7e5badb;border:1px solid #fff6db;box-shadow:0 3px 8px #836c4933;transform:translate(-50%,-50%);pointer-events:none&#x27;;joy.append(knob);
+ const hint=document.createElement(&#x27;span&#x27;);hint.textContent=&#x27;自由走动&#x27;;hint.style.cssText=&#x27;position:absolute;top:100%;left:0;width:100%;text-align:center;font-size:10px;color:#77694d;pointer-events:none&#x27;;joy.append(hint);document.body.append(joy);
+ let joyPointer=null;const keys=new Set();
+ function pointJoy(e){const r=joy.getBoundingClientRect(),dx=(e.clientX-r.left-r.width/2)/(r.width*.36),dz=(e.clientY-r.top-r.height/2)/(r.height*.36),n=Math.max(1,Math.hypot(dx,dz));walk.inputX=dx/n;walk.inputZ=dz/n;if(Math.hypot(dx,dz)&lt;.14)walk.inputX=walk.inputZ=0;knob.style.transform=`translate(calc(-50% + ${walk.inputX*r.width*.28}px),calc(-50% + ${walk.inputZ*r.height*.28}px))`;joy.setAttribute(&#x27;aria-valuenow&#x27;,String(Math.round(Math.min(1,Math.hypot(dx,dz))*100)));}
+ joy.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(!available())return;e.preventDefault();e.stopPropagation();stop();window.WakukuHouseOverview=false;if(dollSleeping)playDollAction(&#x27;tap&#x27;);joy.focus({preventScroll:true});joyPointer=e.pointerId;walk.manual=true;joy.setPointerCapture(e.pointerId);pointJoy(e);});
+ joy.addEventListener(&#x27;pointermove&#x27;,e=&gt;{if(e.pointerId!==joyPointer)return;e.preventDefault();e.stopPropagation();pointJoy(e);});
+ function releaseJoy(e){if(joyPointer===null||e&amp;&amp;e.pointerId!==joyPointer)return;joyPointer=null;stop();joy.setAttribute(&#x27;aria-valuenow&#x27;,&#x27;0&#x27;);}
+ for(const event of [&#x27;pointerup&#x27;,&#x27;pointercancel&#x27;,&#x27;lostpointercapture&#x27;])joy.addEventListener(event,releaseJoy);
+ const directions={ArrowLeft:[-1,0],a:[-1,0],ArrowRight:[1,0],d:[1,0],ArrowUp:[0,-1],w:[0,-1],ArrowDown:[0,1],s:[0,1]};
+ function keyInput(){let x=0,z=0;for(const k of keys){x+=directions[k][0];z+=directions[k][1];}const n=Math.max(1,Math.hypot(x,z));walk.inputX=x/n;walk.inputZ=z/n;}
+ document.addEventListener(&#x27;keydown&#x27;,e=&gt;{const k=e.key.length===1?e.key.toLowerCase():e.key;if(!directions[k]||!available()||/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName||&#x27;&#x27;))return;e.preventDefault();if(!keys.size){stop();walk.manual=true;window.WakukuHouseOverview=false;if(dollSleeping)playDollAction(&#x27;tap&#x27;);}keys.add(k);keyInput();});
+ document.addEventListener(&#x27;keyup&#x27;,e=&gt;{const k=e.key.length===1?e.key.toLowerCase():e.key;if(!keys.has(k))return;e.preventDefault();keys.delete(k);if(keys.size)keyInput();else stop();});
+ window.addEventListener(&#x27;blur&#x27;,()=&gt;{keys.clear();joyPointer=null;stop();});
+ document.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(e.target!==floor&amp;&amp;!nav.contains(e.target)&amp;&amp;e.target!==joy&amp;&amp;!joy.contains(e.target)){window.WakukuHouseOverview=false;stop();}},true);
  canvas.addEventListener(&#x27;pointerup&#x27;,e=&gt;{const p=inputPoint(e);if(!paused&amp;&amp;pet.tool!==1&amp;&amp;!pet.feedPhase&amp;&amp;!pet.foodDrag&amp;&amp;!ballBusy()&amp;&amp;p.y&gt;280&amp;&amp;p.y&lt;535&amp;&amp;Math.abs(p.x-215-fetcher.x+walk.camera)&lt;90){playDollAction(&#x27;tap&#x27;);window.dispatchEvent(new CustomEvent(&#x27;wakuku:tap&#x27;));}});
  window.addEventListener(&#x27;wakuku:tap&#x27;,stop);document.addEventListener(&#x27;visibilitychange&#x27;,stop);gear.addEventListener(&#x27;click&#x27;,stop);
  const oldLaunch=launchBall;launchBall=function(...args){stop();walk.homeX=fetcher.x;oldLaunch(...args);};
  const oldUpdate=updatePolish;updatePolish=function(){oldUpdate();const h=Math.min(dt,.04),blocked=paused||document.hidden||!dollReady||dollSleeping||pet.feedPhase||pet.foodDrag||pointer||doll.brush||ballBusy()||toy.phase===&#x27;offer&#x27;;
-  if(blocked)stop();else{
+  if(blocked){keys.clear();stop();}else if(walk.manual){
+   const ox=fetcher.x,oz=walk.z,step=150*h,can=(x,z)=&gt;!window.WakukuHouseCollision?.(x/S,z/S);
+   const nx=ox+walk.inputX*step,nz=oz+walk.inputZ*step;
+   if(can(nx,nz)){fetcher.x=nx;walk.z=nz;}else{if(can(nx,oz))fetcher.x=nx;if(can(fetcher.x,nz))walk.z=nz;}
+   const dx=fetcher.x-ox,dz=walk.z-oz,moved=Math.hypot(dx,dz);walk.moving=moved&gt;.02;walk.target=fetcher.x;walk.targetZ=walk.z;walk.path=[];fetcher.gait+=moved/24;
+   if(walk.moving){const delta=Math.atan2(dx,dz)-walk.heading;walk.heading+=Math.atan2(Math.sin(delta),Math.cos(delta))*(1-Math.exp(-h*10));}
+   walk.room=Math.abs(fetcher.x)&lt;S?&#x27;客厅&#x27;:fetcher.x&lt;0?(walk.z&lt;0?&#x27;厨房&#x27;:&#x27;阳台&#x27;):(walk.z&lt;0?&#x27;卧室&#x27;:&#x27;洗手间&#x27;);doll.x=fetcher.x;
+  }else{
    if(Math.hypot(walk.target-fetcher.x,walk.targetZ-walk.z)&lt;.5&amp;&amp;walk.path.length){[walk.target,walk.targetZ]=walk.path.shift();}
    const dx=walk.target-fetcher.x,dz=walk.targetZ-walk.z,d=Math.hypot(dx,dz),desired=Math.min(150,Math.sqrt(2*220*d));walk.speed+=clamp(desired-walk.speed,-260*h,260*h);
    let step=Math.min(d,walk.speed*h);if(d&gt;.5){fetcher.x+=dx/d*step;walk.z+=dz/d*step;fetcher.gait+=step/24;walk.heading+=((Math.atan2(dx,dz))-walk.heading)*(1-Math.exp(-h*9));}else{fetcher.x=walk.target;walk.z=walk.targetZ;walk.speed=0;step=0;}
@@ -1336,7 +1357,7 @@ document.addEventListener(&#x27;visibilitychange&#x27;,()=&gt;{if(document.hidde
   floor.dataset.position=fetcher.x.toFixed(1)+&#x27;,&#x27;+walk.z.toFixed(1);floor.dataset.moving=String(walk.moving);floor.dataset.room=walk.room;
  };
  const oldDoll=drawDoll;drawDoll=function(){oldDoll();window.WakukuDoll?.setState?.({roamWeight:walk.weight,roamHeading:walk.heading});};
- const oldRoom=window.drawCozyRoom;window.drawCozyRoom=function(){oldRoom?.();txt(walk.moving?&#x27;正在走向&#x27;+walk.room+&#x27; · 点工具可停下&#x27;:&#x27;点上方房间探索 · 点地面走动&#x27;,216,619,10,&#x27;#7b705b&#x27;,&#x27;center&#x27;);};
+ const oldRoom=window.drawCozyRoom;window.drawCozyRoom=function(){oldRoom?.();txt(walk.manual?&#x27;摇杆自由走动 · 松手停下&#x27;:walk.moving?&#x27;正在走向&#x27;+walk.room+&#x27; · 点工具可停下&#x27;:&#x27;拖动摇杆自由走动 · 方向键 / WASD&#x27;,216,619,10,&#x27;#7b705b&#x27;,&#x27;center&#x27;);};
  const oldReset=reset;reset=function(...args){oldReset(...args);walk.z=0;stop();walk.weight=walk.heading=walk.camera=walk.cameraZ=0;walk.room=&#x27;客厅&#x27;;};
 })();
 &lt;/script&gt;&lt;script&gt;/* Original procedural low-poly furniture; no downloaded textures or external assets. */
@@ -1424,6 +1445,16 @@ window.createWakukuRoom=function(THREE,scene){
  for(let i=0;i&lt;12;i++)box(-3.24+i*.19,.42,2.65,.025,.8,.03,cream);box(-2.2,.84,2.65,2.4,.04,.05,cream);
  for(const x of [-2.9,-1.25]){box(x,.16,2.3,.36,.30,.35,terra);for(let i=0;i&lt;5;i++)orb(x+Math.sin(i*2)*.10,.40+i*.045,2.3+Math.cos(i)*.06,.08,.15,.07,green);}
  box(-2.55,.31,1.3,.43,.06,.43,wood);box(-2.55,.58,1.50,.43,.48,.045,wood);for(const x of [-2.72,-2.38])for(const z of [1.14,1.45])box(x,.15,z,.035,.3,.035,wood);
+ // Collision footprints are derived from the same meshes as the visible house.
+ const obstacles=[];
+ for(const o of group.children){
+  if(!o.isMesh||!o.geometry||o===pane||o===frame)continue;
+  o.geometry.computeBoundingBox();const b=o.geometry.boundingBox;
+  const low=o.position.y+b.min.y*o.scale.y,high=o.position.y+b.max.y*o.scale.y;
+  if(low&gt;.55||high&lt;.075||o.geometry.type===&#x27;PlaneGeometry&#x27;||o.geometry.type===&#x27;TorusGeometry&#x27;)continue;
+  obstacles.push({x0:o.position.x+b.min.x*o.scale.x,x1:o.position.x+b.max.x*o.scale.x,z0:o.position.z+b.min.z*o.scale.z,z1:o.position.z+b.max.z*o.scale.z});
+ }
+ window.WakukuHouseCollision=(x,z)=&gt;{const r=.15;if(x&lt; -3.12||x&gt;3.12||z&lt; -2.48||z&gt;2.48)return true;return obstacles.some(b=&gt;x+r&gt;b.x0&amp;&amp;x-r&lt;b.x1&amp;&amp;z+r&gt;b.z0&amp;&amp;z-r&lt;b.z1);};
  group.userData.assetSource=&#x27;Procedural original geometry&#x27;;
  const anchors={&#x27;开关小屋暖灯&#x27;:[.44,.79,-.40],&#x27;给小植物浇水&#x27;:[-.48,.25,-.25],&#x27;轻拨窗边风铃&#x27;:[-.435,1.02,-.54],&#x27;切换午后与星夜&#x27;:[-.43,1.08,-.677],&#x27;转动音乐盒&#x27;:[.47,.105,.15],&#x27;吹一串泡泡&#x27;:[-.47,.065,.40]};
  const controls={};
