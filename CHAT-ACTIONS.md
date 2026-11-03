@@ -7,14 +7,15 @@
 现有 Agent ID：agent_7601m6dn5nbwfgws9x9zc0emxqm4
 客户端工具 ID：tool_9701m6e3zpjbekgr7tb4x3zmkank
 
-## Laya 边界与预留接口
+## 本机真实 Laya（2026-11-02）
 
-Laya 权重和推理服务尚未部署，不宣称已使用 Laya。官方浏览器示例首次约 1.3 GB 模型下载，不适合当前手机 WebGL 页面。当前 GitHub Pages/Medeo 为静态托管，不运行 Python 模型服务。
+已安装 Laya 0.4.21，并下载官方 convaiinnovations/laya 的 multilingual 权重。本机服务 http://127.0.0.1:8880/ 使用 Apple MPS 推理；这不代表公开 GitHub/Medeo 已切换。
 
-若后续提供自有 HTTPS 模型服务，可在 game-chat.js 前设置 `window.WakukuLaya={endpoint:'https://你的服务/intent'}`。客户端工具被调用时，会把最新用户文本与简要游戏状态发送到此地址，由服务端 Laya 确认动作。端点需允许游戏来源的 CORS，不把私密 API 密钥放在前端。
+该入口注入 `window.WakukuLaya={endpoint:"/intent",direct:true}`。每条文字或语音转写直接提交 Laya，模型选择白名单动作，ElevenLabs 负责对话与声音，并接收实际执行结果。客户端工具不能覆盖 Laya 决策。服务失败、未知动作或低置信度不执行，不退回其他模型做动作判断。
 
-请求：`POST {text,context:{ready,activity,stage,room,moving,feeding}}`
-响应：`{engine:"laya",status:"accepted",action:"sleep"}`；不确定时返回其他 status。服务端必须用真实 Laya 推理、在中文指令样本上验证阈值，不能用关键词规则冒充。服务故障、超时、未知动作均不执行。现有聊天 AI 仍负责决定何时需要工具，因此该接口是额外决策校验，不是每句话独立运行的 Laya 聊天系统。
+服务实现和启动说明在 laya-service/README.md。否定、假设、引用及部分不支持请求有明确拒绝策略；这些规则只阻止执行，不选动作。中文模型覆盖仍有限，见 evaluation-final.json，不能声称已经可靠理解任意聊天。当前 context 传给服务，但分类暂不使用游戏状态。
+
+请求：`POST {text,context}`；响应包含 engine、status、action、candidate 和模型分数。分数不是校准后的准确率。
 
 ## 测试
 
